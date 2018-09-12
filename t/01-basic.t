@@ -68,4 +68,20 @@ throws-like { JSON::Schema.new(schema => { type => ('string', 'namber') }) },
     nok $schema.validate(Any), 'Simple number validation rejects a type object';
 }
 
+{
+    $schema = JSON::Schema.new(schema => { enum => (1, Nil, 'String') });
+    ok $schema.validate(Nil), 'Nil is accepted';
+    ok $schema.validate(1), 'Correct integer is accepted';
+    nok $schema.validate(2), 'Incorrect integer is rejected';
+    ok $schema.validate('String'), 'Correct string is accepted';
+    nok $schema.validate('Strign'), 'Incorrect string is rejected';
+}
+
+{
+    $schema = JSON::Schema.new(schema => { const => 1, type => 'integer' });
+    ok $schema.validate(1), 'Constant 1 is accepted';
+    nok $schema.validate(2), 'Incorrect constant value is rejected 1';
+    # nok $schema.validate(Int), 'Incorrect constant value is rejected 2';
+}
+
 done-testing;

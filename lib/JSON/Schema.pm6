@@ -102,6 +102,27 @@ class JSON::Schema {
         has $.type = Int;
     }
 
+    my class EnumCheck does Check {
+        has $.enum;
+        method check($value --> Nil) {
+            return if $value ~~ Nil && Nil (elem) $!enum;
+            unless $value.defined && $value (elem) $!enum {
+                die X::JSON::Schema::Failed.new:
+                    :$!path, :reason("Value '$value' is outside of enumeration set by enum property");
+            }
+        }
+    }
+
+    my class ConstCheck does Check {
+        has $.const;
+        method check($value --> Nil) {
+            unless $value eqv $!const {
+                die X::JSON::Schema::Failed.new:
+                    :$!path, :reason("Value '$value' does not match with constant $!const");   
+            }
+        }
+    }
+
     has Check $!check;
 
     submethod BUILD(:%schema! --> Nil) {
@@ -159,6 +180,18 @@ class JSON::Schema {
             default {
                 die X::JSON::Schema::BadSchema.new(:$path, :reason("Type property must be a string"));
             }
+        }
+
+        with %schema<enum> {
+            unless $_ ~~ Positional {
+                die X::JSON::Schema::BadSchema.new:
+                :$path, :reason("enum property value must be an array");
+            }
+            push @checks, EnumCheck.new(:$path, enum => $_);
+        }
+
+        with %schema<const> {
+            push @checks, ConstCheck.new(:$path, const => $_);
         }
 
         @checks == 1 ?? @checks[0] !! AllCheck.new(:@checks);

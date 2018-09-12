@@ -1,10 +1,10 @@
 To implement
 ===================
 
-* [ ] Any type
-  * [ ] type
-  * [ ] enum
-  * [ ] const
+* [x] Any type
+  * [x] type
+  * [x] enum
+  * [x] const
 * [ ] Numeric (number and integer)
   * [ ] multipleOf
   * [ ] maximum
