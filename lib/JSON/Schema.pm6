@@ -123,6 +123,18 @@ class JSON::Schema {
         }
     }
 
+    my class MultipleOfCheck does Check {
+        has UInt $.multi;
+        method check($value --> Nil) {
+            if $value ~~ Real {
+                unless $value %% $!multi {
+                    die X::JSON::Schema::Failed.new:
+                        :$!path, :reason("Number is not multiple of $!multi");
+                }
+            }
+        }
+    }
+
     has Check $!check;
 
     submethod BUILD(:%schema! --> Nil) {
@@ -192,6 +204,16 @@ class JSON::Schema {
 
         with %schema<const> {
             push @checks, ConstCheck.new(:$path, const => $_);
+        }
+
+        with %schema<multipleOf> {
+            when * ~~ Int && * > 0 {
+                push @checks, MultipleOfCheck.new(:$path, multi => $_);
+            }
+            default {
+                die X::JSON::Schema::BadSchema.new:
+                    :$path, :reason("The multipleOf property must be a non-negative integer");
+            }
         }
 
         @checks == 1 ?? @checks[0] !! AllCheck.new(:@checks);
