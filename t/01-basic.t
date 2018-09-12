@@ -81,7 +81,7 @@ throws-like { JSON::Schema.new(schema => { type => ('string', 'namber') }) },
     $schema = JSON::Schema.new(schema => { const => 1, type => 'integer' });
     ok $schema.validate(1), 'Constant 1 is accepted';
     nok $schema.validate(2), 'Incorrect constant value is rejected 1';
-    # nok $schema.validate(Int), 'Incorrect constant value is rejected 2';
+    nok $schema.validate(Int), 'Incorrect constant value is rejected 2';
 }
 
 done-testing;
