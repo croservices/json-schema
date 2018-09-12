@@ -35,4 +35,37 @@ throws-like { JSON::Schema.new(schema => { type => ('string', 'namber') }) },
     nok $schema.validate(Any), 'Simple string&integer validation rejects a type object';
 }
 
+{
+    $schema = JSON::Schema.new(schema => { type => 'null' });
+    ok $schema.validate(Nil), 'Simple null validation accepts a Nil';
+    nok $schema.validate(42), 'Simple null validation rejects an integer';
+}
+
+{
+    $schema = JSON::Schema.new(schema => { type => 'boolean' });
+    ok $schema.validate(True), 'Simple boolean validation accepts True';
+    nok $schema.validate(42), 'Simple boolean validation rejects an integer';
+}
+
+{
+    $schema = JSON::Schema.new(schema => { type => 'object' });
+    ok $schema.validate({}), 'Simple object validation accepts empty hash';
+    ok $schema.validate((one => 1).Hash), 'Simple object validation accepts hash';
+    nok $schema.validate(42), 'Simple object validation rejects an integer';
+}
+
+{
+    $schema = JSON::Schema.new(schema => { type => 'array' });
+    ok $schema.validate(()), 'Simple array validation accepts empty list';
+    ok $schema.validate((1, 2, 3)), 'Simple array validation accepts list';
+    nok $schema.validate(42), 'Simple array validation rejects an integer';
+}
+
+{
+    $schema = JSON::Schema.new(schema => { type => 'number' });
+    ok $schema.validate(666.666), 'Simple number validation accepts a number';
+    nok $schema.validate(42), 'Simple number validation rejects an integer';
+    nok $schema.validate(Any), 'Simple number validation rejects a type object';
+}
+
 done-testing;

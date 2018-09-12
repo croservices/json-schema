@@ -64,6 +64,34 @@ class JSON::Schema {
         }
     }
 
+    my class NullCheck does TypeCheck {
+        method check($value --> Nil) {
+            unless $value ~~ Nil {
+                die X::JSON::Schema::Failed.new(path => $.path, reason => 'Not a null');
+            }
+        }
+    }
+
+    my class BooleanCheck does TypeCheck {
+        has $.reason = 'Not a boolean';
+        has $.type = Bool;
+    }
+
+    my class ObjectCheck does TypeCheck {
+        has $.reason = 'Not an object';
+        has $.type = Associative;
+    }
+
+    my class ArrayCheck does TypeCheck {
+        has $.reason = 'Not an array';
+        has $.type = Positional;
+    }
+
+    my class NumberCheck does TypeCheck {
+        has $.reason = 'Not a number';
+        has $.type = Rat;
+    }
+
     my class StringCheck does TypeCheck {
         has $.reason = 'Not a string';
         has $.type = Str;
@@ -86,6 +114,21 @@ class JSON::Schema {
         }
         when 'integer' {
             IntegerCheck.new(:$path);
+        }
+        when 'null' {
+            NullCheck.new(:$path);
+        }
+        when 'boolean' {
+            BooleanCheck.new(:$path);
+        }
+        when 'object' {
+            ObjectCheck.new(:$path);
+        }
+        when 'array' {
+            ArrayCheck.new(:$path);
+        }
+        when 'number' {
+            NumberCheck.new(:$path);
         }
         default {
             die X::JSON::Schema::BadSchema.new(:$path, :reason("Unrecognized type '$_'"));
