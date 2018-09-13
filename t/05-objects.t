@@ -37,4 +37,18 @@ throws-like
     ok $schema.validate({a => 1, b => 2, c => 3}), 'Object that has additional attributes besides required accepted';
 }
 
+{
+    my $schema = JSON::Schema.new(schema => {
+        type => 'object',
+        properties => {
+            id => { type => 'integer' },
+            name => { type => 'string' }
+        }
+    });
+    ok $schema.validate({id => 1, name => 'one'}), 'Correct object accepted';
+    ok $schema.validate({name => 'one'}), 'Correct object with values not in properties accepted';
+    nok $schema.validate({id => 1, name => 2}), 'Object with incorrect schema rejected';
+    nok $schema.validate({name => 2}), 'Object with incorrect schema rejected';
+}
+
 done-testing;

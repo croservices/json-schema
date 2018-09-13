@@ -318,6 +318,37 @@ class JSON::Schema {
         }
     }
 
+    my class PropertiesCheck does Check {
+        has Check %.props;
+        has $.add;
+        method check($value --> Nil) {
+            if $value ~~ Associative && $value.defined {
+                if $!add === True {
+                    for (%!props.keys (&) $value.keys).keys -> $key {
+                        %!props{$key}.check($value{$key});
+                    }
+                } elsif $!add === False {
+                    if (set $value.keys) ⊈ (set %!props.keys) {
+                        die X::OpenAPI::Schema::Validate::Failed.new:
+                            path => $!path ~ '/properties',
+                            :reason("Object has properties that are not covered by properties property: $((set $value.keys) (-) (set %!props.keys)).keys.join(', ')");
+                    } else {
+                        $value.keys.map({ %!props{$_}.check($value{$_}) });
+                    }
+                } else {
+                    for (%!props.keys (&) $value.keys).keys -> $key {
+                        %!props{$key}.check($value{$key});
+                    }
+                    if $!add.elems != 0 {
+                        for ($value.keys (-) %!props.keys).keys -> $key {
+                            $!add.check($value{$key});
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     has Check $!check;
 
     submethod BUILD(:%schema! --> Nil) {
@@ -538,6 +569,30 @@ class JSON::Schema {
             default {
                 die X::JSON::Schema::BadSchema.new:
                     :$path, :reason("The required property must be a Positional of unique Str");
+            }
+        }
+
+        with %schema<properties> {
+            when Associative {
+                my %props = .map({ .key => check-for($path ~ "/properties/{.key}", %(.value)) });
+                with %schema<additionalProperties> {
+                    when $_ === True|False {
+                        push @checks, PropertiesCheck.new(:$path, :%props, add => $_);
+                    }
+                    when Associative {
+                        my $add = check-for($path ~ "/additionalProperties", $_);
+                        push @checks, PropertiesCheck.new(:$path, :%props, :$add);
+                    }
+                    default {
+                        die X::OpenAPI::Schema::Validate::BadSchema.new:
+                            :$path, :reason("The additionalProperties property must be a boolean or an object");
+                    }
+                }
+                push @checks, PropertiesCheck.new(:$path, :%props, add => {});
+            }
+            default {
+                die X::OpenAPI::Schema::Validate::BadSchema.new:
+                    :$path, :reason("The properties property must be an object");
             }
         }
 
