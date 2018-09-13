@@ -167,6 +167,26 @@ class JSON::Schema {
         method compare($value-to-compare, $border-value) { $value-to-compare < $border-value }
     }
 
+    my class MinLengthCheck does Check {
+        has Int $.value;
+        method check($value --> Nil) {
+            if $value ~~ Str && $value.defined && $value.codes < $!value {
+                die X::JSON::Schema::Failed.new:
+                    :$!path, :reason("String is less than $!value codepoints");
+            }
+        }
+    }
+
+    my class MaxLengthCheck does Check {
+        has Int $.value;
+        method check($value --> Nil) {
+            if $value ~~ Str && $value.defined && $value.codes > $!value {
+                die X::JSON::Schema::Failed.new:
+                    :$!path, :reason("String is more than $!value codepoints");
+            }
+        }
+    }
+
     has Check $!check;
 
     submethod BUILD(:%schema! --> Nil) {
@@ -248,9 +268,9 @@ class JSON::Schema {
             }
         }
 
-        my %keys = minimum => MinCheck, minimumExclusive => MinExCheck,
-                   maximum => MaxCheck, maximumExclusive => MaxExCheck;
-        for %keys.kv -> $k, $v {
+        my %num-keys = minimum => MinCheck, minimumExclusive => MinExCheck,
+                       maximum => MaxCheck, maximumExclusive => MaxExCheck;
+        for %num-keys.kv -> $k, $v {
             with %schema{$k} {
                 unless $_ ~~ Real {
                     die X::JSON::Schema::BadSchema.new:
@@ -259,6 +279,37 @@ class JSON::Schema {
                 push @checks, $v.new(:$path, border-value => $_);
             }
         }
+
+        my %str-keys = minLength => MinLengthCheck, maxLength => MaxLengthCheck;
+        for %str-keys.kv -> $prop, $check {
+            with %schema{$prop} {
+                when UInt {
+                    push @checks, $check.new(:$path, value => $_);
+                }
+                default {
+                    die X::JSON::Schema::BadSchema.new:
+                        :$path, :reason("The $prop property must be a non-negative integer");
+                }
+            }
+        }
+
+        # with %schema<pattern> {
+        #     when Str {
+        #         if ECMA262Regex.parse($_) {
+        #             push @checks, PatternCheck.new(:$path, :pattern($_));
+        #         }
+        #         else {
+        #             die X::OpenAPI::Schema::Validate::BadSchema.new:
+        #                 :$path, :reason("The pattern property must be an ECMA 262 regex");
+        #         }
+        #     }
+        #     default {
+        #         die X::OpenAPI::Schema::Validate::BadSchema.new:
+        #             :$path, :reason("The pattern property must be a string");
+        #     }
+        # }
+
+
         @checks == 1 ?? @checks[0] !! AllCheck.new(:@checks);
     }
 
