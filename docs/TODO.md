@@ -23,9 +23,9 @@ To implement
   * [x] uniqueItems
   * [x] contains
 * [ ] Object
-  * [ ] maxProperties
-  * [ ] minProperties
-  * [ ] required
+  * [x] maxProperties
+  * [x] minProperties
+  * [x] required
   * [ ] properties
   * [ ] patternProperties
   * [ ] additionalProperties

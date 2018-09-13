@@ -288,6 +288,36 @@ class JSON::Schema {
         }
     }
 
+    my class MinPropertiesCheck does Check {
+        has Int $.min;
+        method check($value --> Nil) {
+            if $value ~~ Associative && $value.values < $!min {
+                die X::JSON::Schema::Failed.new:
+                    :$!path, :reason("Object has less than $!min properties");
+            }
+        }
+    }
+
+    my class MaxPropertiesCheck does Check {
+        has Int $.max;
+        method check($value --> Nil) {
+            if $value ~~ Associative && $value.values > $!max {
+                die X::JSON::Schema::Failed.new:
+                    :$!path, :reason("Object has more than $!max properties");
+            }
+        }
+    }
+
+    my class RequiredCheck does Check {
+        has Str @.prop;
+        method check($value --> Nil) {
+            if $value ~~ Associative && not [&&] $value{@!prop}.map(*.defined) {
+                die X::JSON::Schema::Failed.new:
+                    :$!path, :reason("Object does not have required property");
+            }
+        }
+    }
+
     has Check $!check;
 
     submethod BUILD(:%schema! --> Nil) {
@@ -474,6 +504,40 @@ class JSON::Schema {
             default {
                 die X::JSON::Schema::BadSchema.new:
                     :$path, :reason("The contains property must be a JSON Schema object");
+            }
+        }
+
+        with %schema<minProperties> {
+            when UInt {
+                push @checks, MinPropertiesCheck.new(:$path, :min($_));
+            }
+            default {
+                die X::JSON::Schema::BadSchema.new:
+                    :$path, :reason("The minProperties property must be a non-negative integer");
+            }
+        }
+
+        with %schema<maxProperties> {
+            when UInt {
+                push @checks, MaxPropertiesCheck.new(:$path, :max($_));
+            }
+            default {
+                die X::JSON::Schema::BadSchema.new:
+                    :$path, :reason("The maxProperties property must be a non-negative integer");
+            }
+        }
+
+        with %schema<required> {
+            when Positional {
+                if ([&&] .map(* ~~ Str)) && .elems == .unique.elems {
+                    push @checks, RequiredCheck.new(:$path, prop => @$_);
+                } else {
+                    proceed;
+                }
+            }
+            default {
+                die X::JSON::Schema::BadSchema.new:
+                    :$path, :reason("The required property must be a Positional of unique Str");
             }
         }
 
