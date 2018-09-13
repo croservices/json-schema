@@ -6,11 +6,11 @@ To implement
   * [x] enum
   * [x] const
 * [ ] Numeric (number and integer)
-  * [ ] multipleOf
-  * [ ] maximum
-  * [ ] exclusiveMaximum
-  * [ ] minimum
-  * [ ] exclusiveMinimum
+  * [x] multipleOf
+  * [x] maximum
+  * [x] exclusiveMaximum
+  * [x] minimum
+  * [x] exclusiveMinimum
 * [ ] String
   * [ ] maxLength
   * [ ] minLength

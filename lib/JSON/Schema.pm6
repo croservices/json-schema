@@ -135,6 +135,38 @@ class JSON::Schema {
         }
     }
 
+    my role CmpCheck does Check {
+        has Int $.border-value;
+
+        method check($value --> Nil) {
+            return if $value !~~ Real;
+            unless self.compare($value, $!border-value) {
+                die X::JSON::Schema::Failed.new:
+                    path => $.path, :reason("$value is {self.reason} $!border-value");
+            }
+        }
+    }
+
+    my class MinCheck does CmpCheck {
+        method reason { 'less than' }
+        method compare($value-to-compare, $border-value) { $value-to-compare >= $border-value }
+    }
+
+    my class MinExCheck does CmpCheck {
+        method reason { 'less or equal than' }
+        method compare($value-to-compare, $border-value) { $value-to-compare > $border-value }
+    }
+
+    my class MaxCheck does CmpCheck {
+        method reason { 'more than' }
+        method compare($value-to-compare, $border-value) { $value-to-compare <= $border-value }
+    }
+
+    my class MaxExCheck does CmpCheck {
+        method reason { 'more or equal than' }
+        method compare($value-to-compare, $border-value) { $value-to-compare < $border-value }
+    }
+
     has Check $!check;
 
     submethod BUILD(:%schema! --> Nil) {
@@ -207,7 +239,7 @@ class JSON::Schema {
         }
 
         with %schema<multipleOf> {
-            when * ~~ Int && * > 0 {
+            when $_ ~~ Int && $_ > 0 {
                 push @checks, MultipleOfCheck.new(:$path, multi => $_);
             }
             default {
@@ -216,6 +248,17 @@ class JSON::Schema {
             }
         }
 
+        my %keys = minimum => MinCheck, minimumExclusive => MinExCheck,
+                   maximum => MaxCheck, maximumExclusive => MaxExCheck;
+        for %keys.kv -> $k, $v {
+            with %schema{$k} {
+                unless $_ ~~ Real {
+                    die X::JSON::Schema::BadSchema.new:
+                        :$path, :reason("The $k property must be a number");
+                }
+                push @checks, $v.new(:$path, border-value => $_);
+            }
+        }
         @checks == 1 ?? @checks[0] !! AllCheck.new(:@checks);
     }
 
