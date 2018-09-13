@@ -1,18 +1,19 @@
 {
-  "authors" : [
-      "Alexander Kiryuhin <alexander.kiryuhin@gmail.com>"
-  ],
-  "description" : "JSON Schema specification implementation",
-  "license" : "Artistic-2.0",
-  "meta-version" : "0",
-  "name" : "JSON::Schema",
-  "perl" : "6.c",
-  "provides" : {
-    "JSON::Schema" : "lib/JSON/Schema.pm6"
-  },
-  "source-url" : "",
-  "support" : {
-    "source" : null
-  },
-  "version" : "0.0.1"
+    "authors" : [
+        "Alexander Kiryuhin <alexander.kiryuhin@gmail.com>"
+    ],
+    "description" : "JSON Schema specification implementation",
+    "license" : "Artistic-2.0",
+    "meta-version" : "0",
+    "name" : "JSON::Schema",
+    "perl" : "6.c",
+    "provides" : {
+        "JSON::Schema" : "lib/JSON/Schema.pm6",
+        "JSON::ECMA262Regex" : "lib/JSON/ECMA262Regex.pm6"
+    },
+    "source-url" : "",
+    "support" : {
+        "source" : null
+    },
+    "version" : "0.0.1"
 }
