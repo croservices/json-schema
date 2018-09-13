@@ -15,13 +15,13 @@ To implement
   * [x] maxLength
   * [x] minLength
   * [x] pattern
-* [ ] Arrays
-  * [ ] items
-  * [ ] additionalItems
+* [x] Arrays
+  * [x] items
+  * [x] additionalItems
   * [x] maxItems
   * [x] minItems
   * [x] uniqueItems
-  * [ ] contains
+  * [x] contains
 * [ ] Object
   * [ ] maxProperties
   * [ ] minProperties

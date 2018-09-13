@@ -91,6 +91,11 @@ throws-like
     nok $schema.validate('string'), 'String instead of array rejected';
 }
 
+throws-like
+    { JSON::Schema.new(schema => { uniqueItems => 4.5 }) },
+    X::JSON::Schema::BadSchema,
+    'Having uniqueItems property be an integer is refused';
+
 {
     $schema = JSON::Schema.new(schema => {
         type => 'array',
@@ -103,6 +108,16 @@ throws-like
     });
     ok $schema.validate([{a => 1, b => 2}, {c => 1, a => 1}]), 'Array of objects without duplicates accepted';
     nok $schema.validate([{a => 1, b => 2}, {a => 1, b => 2}]), 'Array of objects with duplicates rejected';
+}
+
+{
+    $schema = JSON::Schema.new(schema => {
+        contains => { type => 'integer', minimum => 0 }
+    });
+    nok $schema.validate(list), 'Empty array does not contain needed element';
+    nok $schema.validate((-1).List), 'contains check for positive integer rejects negative integer';
+    nok $schema.validate(('hello', 'foo')), 'contains check for positive integer rejects array of strings';
+    ok $schema.validate(('hello', 1, 'foo')), 'contains check for positive integer accepts array of strings with `1` included';
 }
 
 done-testing;

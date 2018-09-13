@@ -140,10 +140,11 @@ class JSON::Schema {
         has Int $.border-value;
 
         method check($value --> Nil) {
-            return if $value !~~ Real;
-            unless self.compare($value, $!border-value) {
-                die X::JSON::Schema::Failed.new:
-                    path => $.path, :reason("$value is {self.reason} $!border-value");
+            if $value ~~ Real {
+                unless self.compare($value, $!border-value) {
+                    die X::JSON::Schema::Failed.new:
+                        path => $.path, :reason("$value is {self.reason} $!border-value");
+                }
             }
         }
     }
@@ -265,6 +266,24 @@ class JSON::Schema {
                 for @$value[$!size..*] -> $item {
                     $!check.check($item);
                 }
+            }
+        }
+    }
+
+    my class ContainsCheck does Check {
+        has Check $.check;
+
+        method check($value --> Nil) {
+            if $value ~~ Positional {
+                for @$value -> $item {
+                    CATCH {
+                        when X::JSON::Schema::Failed {}
+                    }
+                    $!check.check($item);
+                    return;
+                }
+                die X::JSON::Schema::Failed.new:
+                    :$!path, :reason("Array does not contain any element that is accepted by `contains` check");
             }
         }
     }
@@ -444,6 +463,17 @@ class JSON::Schema {
             default {
                 die X::JSON::Schema::BadSchema.new:
                     :$path, :reason("The uniqueItems property must be a boolean");
+            }
+        }
+
+        with %schema<contains> {
+            when Associative {
+                my $check = check-for($path, $_);
+                push @checks, ContainsCheck.new(:$path, :$check);
+            }
+            default {
+                die X::JSON::Schema::BadSchema.new:
+                    :$path, :reason("The contains property must be a JSON Schema object");
             }
         }
 
