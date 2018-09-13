@@ -14,7 +14,7 @@ To implement
 * [x] String
   * [x] maxLength
   * [x] minLength
-  * [ ] pattern
+  * [x] pattern
 * [ ] Arrays
   * [ ] items
   * [ ] additionalItems

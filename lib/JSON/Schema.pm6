@@ -1,4 +1,5 @@
 use v6;
+use JSON::ECMA262Regex;
 
 class X::JSON::Schema::BadSchema is Exception {
     has $.path;
@@ -187,6 +188,21 @@ class JSON::Schema {
         }
     }
 
+    my class PatternCheck does Check {
+        has Str $.pattern;
+        has Regex $!rx;
+        submethod TWEAK() {
+            use MONKEY-SEE-NO-EVAL;
+            $!rx = EVAL 'rx:P5/' ~ $!pattern ~ '/';
+        }
+        method check($value --> Nil) {
+            if $value ~~ Str && $value !~~ $!rx {
+                die X::JSON::Schema::Failed.new:
+                    :$!path, :reason("String does not match /$!pattern/");
+            }
+        }
+    }
+
     has Check $!check;
 
     submethod BUILD(:%schema! --> Nil) {
@@ -293,22 +309,21 @@ class JSON::Schema {
             }
         }
 
-        # with %schema<pattern> {
-        #     when Str {
-        #         if ECMA262Regex.parse($_) {
-        #             push @checks, PatternCheck.new(:$path, :pattern($_));
-        #         }
-        #         else {
-        #             die X::OpenAPI::Schema::Validate::BadSchema.new:
-        #                 :$path, :reason("The pattern property must be an ECMA 262 regex");
-        #         }
-        #     }
-        #     default {
-        #         die X::OpenAPI::Schema::Validate::BadSchema.new:
-        #             :$path, :reason("The pattern property must be a string");
-        #     }
-        # }
-
+        with %schema<pattern> {
+            when Str {
+                if ECMA262Regex.parse($_) {
+                    push @checks, PatternCheck.new(:$path, :pattern($_));
+                }
+                else {
+                    die X::JSON::Schema::BadSchema.new:
+                        :$path, :reason("The pattern property must be an ECMA 262 regex");
+                }
+            }
+            default {
+                die X::JSON::Schema::BadSchema.new:
+                    :$path, :reason("The pattern property must be a string");
+            }
+        }
 
         @checks == 1 ?? @checks[0] !! AllCheck.new(:@checks);
     }
