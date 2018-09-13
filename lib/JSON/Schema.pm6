@@ -232,6 +232,43 @@ class JSON::Schema {
         }
     }
 
+    my class ItemsByObjectCheck does Check {
+        has Check $.check;
+
+        method check($value --> Nil) {
+            if $value ~~ Positional {
+                for @$value -> $item {
+                    $!check.check($item);
+                }
+            }
+        }
+    }
+
+    my class ItemsByArraysCheck does Check {
+        has Check @.checks;
+
+        method check($value --> Nil) {
+            if $value ~~ Positional {
+                for @$value Z @!checks -> ($item, $check) {
+                    $check.check($item);
+                }
+            }
+        }
+    }
+
+    my class AdditionalItemsCheck does Check {
+        has Check $.check;
+        has Int $.size;
+
+        method check($value --> Nil) {
+            if $value ~~ Positional && $value.elems > $!size {
+                for @$value[$!size..*] -> $item {
+                    $!check.check($item);
+                }
+            }
+        }
+    }
+
     has Check $!check;
 
     submethod BUILD(:%schema! --> Nil) {
@@ -351,6 +388,38 @@ class JSON::Schema {
             default {
                 die X::JSON::Schema::BadSchema.new:
                     :$path, :reason("The pattern property must be a string");
+            }
+        }
+
+        with %schema<items> {
+            when Associative {
+                push @checks, ItemsByObjectCheck.new(:$path, check => check-for($path, $_));
+            }
+            when Positional {
+                unless ($_.all) ~~ Hash {
+                    die X::JSON::Schema::BadSchema.new:
+                    :$path, :reason("The item property array must contain only objects");
+                }
+
+                my @items-checks = $_.map({ check-for($path, $_) });
+                push @checks, ItemsByArraysCheck.new(:$path, checks => @items-checks);
+            }
+            default {
+                die X::JSON::Schema::BadSchema.new:
+                    :$path, :reason("The item property must be a JSON Schema or array of JSON Schema objects");
+            }
+        }
+
+        with %schema<additionalItems> {
+            when Associative {
+                if %schema<items> ~~ Positional {
+                    my $check = check-for($path, $_);
+                    push @checks, AdditionalItemsCheck.new(:$path, :$check, size => %schema<items>.elems);
+                }
+            }
+            default {
+                die X::JSON::Schema::BadSchema.new:
+                    :$path, :reason("The additionalItems property must be a JSON Schema object");
             }
         }
 
