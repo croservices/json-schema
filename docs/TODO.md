@@ -11,9 +11,9 @@ To implement
   * [x] exclusiveMaximum
   * [x] minimum
   * [x] exclusiveMinimum
-* [ ] String
-  * [ ] maxLength
-  * [ ] minLength
+* [x] String
+  * [x] maxLength
+  * [x] minLength
   * [ ] pattern
 * [ ] Arrays
   * [ ] items
