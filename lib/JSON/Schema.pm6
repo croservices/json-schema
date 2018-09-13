@@ -329,7 +329,7 @@ class JSON::Schema {
                     }
                 } elsif $!add === False {
                     if (set $value.keys) ⊈ (set %!props.keys) {
-                        die X::OpenAPI::Schema::Validate::Failed.new:
+                        die X::JSON::Schema::Failed.new:
                             path => $!path ~ '/properties',
                             :reason("Object has properties that are not covered by properties property: $((set $value.keys) (-) (set %!props.keys)).keys.join(', ')");
                     } else {
@@ -344,6 +344,24 @@ class JSON::Schema {
                             $!add.check($value{$key});
                         }
                     }
+                }
+            }
+        }
+    }
+
+    my class PatternProperties does Check {
+        has @.regex-checks;
+
+        method check($value --> Nil) {
+            return if $value !~~ Associative || !$value.defined;
+            for $value.kv -> $prop, $val {
+                for @!regex-checks {
+                    my $regex = .key;
+                    my $inner-check = .value;
+                    try $regex.check($prop);
+                    next if $! ~~ X::JSON::Schema::Failed;
+                    # If value survived regex check, check it
+                    $inner-check.check($val);
                 }
             }
         }
@@ -584,15 +602,30 @@ class JSON::Schema {
                         push @checks, PropertiesCheck.new(:$path, :%props, :$add);
                     }
                     default {
-                        die X::OpenAPI::Schema::Validate::BadSchema.new:
+                        die X::JSON::Schema::BadSchema.new:
                             :$path, :reason("The additionalProperties property must be a boolean or an object");
                     }
                 }
                 push @checks, PropertiesCheck.new(:$path, :%props, add => {});
             }
             default {
-                die X::OpenAPI::Schema::Validate::BadSchema.new:
+                die X::JSON::Schema::BadSchema.new:
                     :$path, :reason("The properties property must be an object");
+            }
+        }
+
+        with %schema<patternProperties> {
+            when Associative {
+                my @regex-checks;
+                for .kv -> $pattern, $schema {
+                    # A number of check -> inner check pairs
+                    @regex-checks.push: PatternCheck.new(:$pattern) => check-for($path, $schema);
+                }
+                push @checks, PatternProperties.new(:$path, :@regex-checks);
+            }
+            default {
+                die X::JSON::Schema::BadSchema.new:
+                    :$path, :reason("The patternProperties property must be an object");
             }
         }
 

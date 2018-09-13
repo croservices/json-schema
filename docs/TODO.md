@@ -27,7 +27,7 @@ To implement
   * [x] minProperties
   * [x] required
   * [x] properties
-  * [ ] patternProperties
+  * [x] patternProperties
   * [ ] additionalProperties
   * [ ] dependencies
   * [ ] propertyNames
