@@ -53,13 +53,13 @@ throws-like
 
 {
     $schema = JSON::Schema.new(schema => {
-        type => 'object',
         patternProperties => {
            '^foo\w+' => { type => 'string' },
             '\w+bar$' => { type => 'number' }
         }
     });
     subtest {
+        ok $schema.validate(5), 'Validation against patternProperties with primitive type value always succeeds';
         ok $schema.validate({foo => 1}), 'Property not matched with patternProperties rule is accepted';
         ok $schema.validate({fooo => 'foo'}), 'Property matched with patternProperties is accepted';
         nok $schema.validate({fooo => 1}), 'Property matched with patternProperties is rejected';
