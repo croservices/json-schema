@@ -203,6 +203,35 @@ class JSON::Schema {
         }
     }
 
+    my class MinItemsCheck does Check {
+        has Int $.value;
+        method check($value --> Nil) {
+            if $value ~~ Positional && $value.elems < $!value {
+                die X::JSON::Schema::Failed.new:
+                    :$!path, :reason("Array has less than $!value elements");
+            }
+        }
+    }
+
+    my class MaxItemsCheck does Check {
+        has Int $.value;
+        method check($value --> Nil) {
+            if $value ~~ Positional && $value.elems > $!value {
+                die X::JSON::Schema::Failed.new:
+                    :$!path, :reason("Array has less than $!value elements");
+            }
+        }
+    }
+
+    my class UniqueItemsCheck does Check {
+        method check($value --> Nil) {
+            if $value ~~ Positional && $value.elems != $value.unique(with => &[eqv]).elems {
+                die X::JSON::Schema::Failed.new:
+                    :$!path, :reason("Array has duplicated values");
+            }
+        }
+    }
+
     has Check $!check;
 
     submethod BUILD(:%schema! --> Nil) {
@@ -322,6 +351,30 @@ class JSON::Schema {
             default {
                 die X::JSON::Schema::BadSchema.new:
                     :$path, :reason("The pattern property must be a string");
+            }
+        }
+
+        my %array-keys = minItems => MinItemsCheck, maxItems => MaxItemsCheck;
+        for %array-keys.kv -> $prop, $check {
+            with %schema{$prop} {
+                when UInt {
+                    push @checks, $check.new(:$path, value => $_);
+                }
+                default {
+                    die X::JSON::Schema::BadSchema.new:
+                        :$path, :reason("The $prop property must be a non-negative integer");
+                }
+            }
+
+        }
+        with %schema<uniqueItems> {
+            when $_ === True {
+                push @checks, UniqueItemsCheck.new(:$path);
+            }
+            when  $_ === False {}
+            default {
+                die X::JSON::Schema::BadSchema.new:
+                    :$path, :reason("The uniqueItems property must be a boolean");
             }
         }
 

@@ -5,7 +5,7 @@ To implement
   * [x] type
   * [x] enum
   * [x] const
-* [ ] Numeric (number and integer)
+* [x] Numeric (number and integer)
   * [x] multipleOf
   * [x] maximum
   * [x] exclusiveMaximum
@@ -18,9 +18,9 @@ To implement
 * [ ] Arrays
   * [ ] items
   * [ ] additionalItems
-  * [ ] maxItems
-  * [ ] minItems
-  * [ ] uniqueItems
+  * [x] maxItems
+  * [x] minItems
+  * [x] uniqueItems
   * [ ] contains
 * [ ] Object
   * [ ] maxProperties
