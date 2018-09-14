@@ -13,7 +13,7 @@ throws-like
     X::JSON::Schema::BadSchema,
     'Having maxProperties property be an non-integer is refused (Str)';
 throws-like
-    { JSON::Schema.new(schema => { required => <a a> }) },
+    { JSON::Schema.new(schema => { required => ('a', 'a') }) },
     X::JSON::Schema::BadSchema,
     'Having required property be an non-unique list is refused';
 
@@ -27,7 +27,7 @@ throws-like
     ok $schema.validate({a => 1, b => 2}), 'Object of minimum properties number rejected';
     ok $schema.validate({a => 1, b => 2, c => 3, d => 4}), 'Object of maximum properties number accepted';
     nok $schema.validate({a => 1, b => 2, c => 3, d => 4, e => 5}), 'Object over maximum properties number rejected';
-    nok $schema.validate('string'), 'String instead of array rejected';
+    nok $schema.validate('string'), 'String instead of object rejected';
     $schema = JSON::Schema.new(schema => {
         type => 'object',
         required => <a b>
@@ -36,6 +36,15 @@ throws-like
     ok $schema.validate({a => 1, b => 2}), 'Object with all required attributes accepted';
     ok $schema.validate({a => 1, b => 2, c => 3}), 'Object that has additional attributes besides required accepted';
 }
+
+throws-like
+    { JSON::Schema.new(schema => { properties => list }) },
+    X::JSON::Schema::BadSchema,
+    'Having properties property be an empty list is refused';
+throws-like
+    { JSON::Schema.new(schema => { properties => { foo => 1 } }) },
+    X::JSON::Schema::BadSchema,
+    'Having properties property value be non-object is refused';
 
 {
     $schema = JSON::Schema.new(schema => {

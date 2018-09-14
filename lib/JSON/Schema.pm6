@@ -592,6 +592,10 @@ class JSON::Schema {
 
         with %schema<properties> {
             when Associative {
+                unless .values.map(* ~~ Associative).all {
+                    die X::JSON::Schema::BadSchema.new:
+                    :$path, :reason("The properties property inner values must be an object");
+                }
                 my %props = .map({ .key => check-for($path ~ "/properties/{.key}", %(.value)) });
                 push @checks, PropertiesCheck.new(:$path, :%props, add => {});
             }
