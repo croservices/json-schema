@@ -1,5 +1,9 @@
 use v6;
+use Cro::Uri;
+use DateTime::Parse;
 use JSON::ECMA262Regex;
+use JSON::Pointer;
+use JSON::Pointer::Relative;
 
 class X::JSON::Schema::BadSchema is Exception {
     has $.path;
@@ -19,6 +23,25 @@ class X::JSON::Schema::Failed is Exception {
 }
 
 class JSON::Schema {
+    my %DEFAULT-FORMAT =
+        date-time => { CATCH {default {False}}; DateTime::Parse.new($_, :rule('rfc3339-date')) },
+        date => { CATCH {default {False}}; DateTime::Parse.new($_, :rule('date5')) },
+        time => { CATCH {default {False}}; DateTime::Parse.new($_, :rule('time2')) },
+        email => { True },
+        idn-email => { True },
+        hostname => { True },
+        idn-hostname => { True },
+        ipv4 => { CATCH {default {False}}; Cro::Uri::GenericParser.parse($_, :rule('IPv4address')) },
+        ipv6 => { CATCH {default {False}}; Cro::Uri::GenericParser.parse($_, :rule('IPv6address')) },
+        uri => { CATCH {default {False}}; Cro::Uri.parse($_) },
+        uri-reference => { CATCH {default {False}}; Cro::Uri::GenericParser.parse($_, :rule<relative-ref>) },
+        iri => { True },
+        iri-reference => { True },
+        uri-template => { CATCH {default {False}}; Cro::Uri::URI-Template.parse($_) },
+        json-pointer => { CATCH {default {False}}; JSONPointer.parse($_) },
+        relative-json-pointer => { CATCH {default {False}}; JSONPointerRelative.parse($_) },
+        regex => { CATCH {default {False}}; ECMA262Regex.parse($_) };
+
     # Role that describes a single check for a given path.
     # `chech` method is overloaded, with possible usage of additional per-class
     # attributes
@@ -466,10 +489,21 @@ class JSON::Schema {
         }
     }
 
+    my class FormatCheck does Check {
+        has $.checker;
+        has $.format-name;
+        method check($value --> Nil) {
+            unless $value ~~ $!checker {
+                die X::JSON::Schema::Failed.new:
+                    :$!path, :reason("Value $value does not match against $!format-name format");
+            }
+        }
+    }
+
     has Check $!check;
 
-    submethod BUILD(:%schema! --> Nil) {
-        $!check = check-for('root', %schema);
+    submethod BUILD(:%schema!, :%formats = %DEFAULT-FORMAT, :%add-formats = {} --> Nil) {
+        $!check = check-for('root', %schema, :%formats, :%add-formats);
     }
 
     sub check-for-type($path, $_) {
@@ -499,7 +533,7 @@ class JSON::Schema {
         }
     }
 
-    sub check-for($path, %schema) {
+    sub check-for($path, %schema, :%formats, :%add-formats) {
         my @checks;
 
         with %schema<type> {
@@ -842,6 +876,19 @@ class JSON::Schema {
             default {
                 die X::JSON::Schema::BadSchema.new:
                     :$path, :reason("The not property must be an object");
+            }
+        }
+
+        with %schema<format> {
+            if $_ !~~ Str {
+                die X::JSON::Schema::Bad::Schema.new:
+                    :$path, :reason("The format property bust be a string");
+            }
+            with %formats{$_} {
+                push @checks, FormatCheck.new(:$path, checker => $_, format-name => %schema<format>)
+            }
+            with %add-formats{$_} {
+                push @checks, FormatCheck.new(:$path, checker => $_, format-name => %schema<format>)
             }
         }
 
