@@ -367,6 +367,38 @@ class JSON::Schema {
         }
     }
 
+    my class AdditionalProperties does Check {
+        has @.inner-const-checks;
+        has @.inner-regex-checks;
+        has Check $.check;
+
+        method check($value --> Nil) {
+            return if $value !~~ Associative || !$value.defined;
+            for $value.kv -> $prop, $val {
+                my $already-checked = False;
+                for @!inner-const-checks {
+                    # Skip if the property is already checked with `properties`
+                    try .check($prop);
+                    if $! !~~ X::JSON::Schema::Failed {
+                        $already-checked = True;
+                        last;
+                    }
+                }
+                next if $already-checked;
+                for @!inner-regex-checks {
+                    # Skip if `patternProperties` check was successful
+                    try .check($prop);
+                    if $! !~~ X::JSON::Schema::Failed {
+                        $already-checked = True;
+                        last;
+                    }
+                }
+                next if $already-checked;
+                $!check.check($val);
+            }
+        }
+    }
+
     has Check $!check;
 
     submethod BUILD(:%schema! --> Nil) {
@@ -617,6 +649,29 @@ class JSON::Schema {
             default {
                 die X::JSON::Schema::BadSchema.new:
                     :$path, :reason("The patternProperties property must be an object");
+            }
+        }
+
+        with %schema<additionalProperties> {
+            when Associative {
+                my @inner-const-checks;
+                my @inner-regex-checks;
+                with %schema<properties> {
+                    for .keys -> $name {
+                        push @inner-const-checks, ConstCheck.new(:$path, const => $name);
+                    }
+                }
+                with %schema<patternProperties> {
+                    for .keys -> $pattern {
+                        push @inner-regex-checks, PatternCheck.new(:$pattern);
+                    }
+                }
+                push @checks, AdditionalProperties.new(:$path, check => check-for($path, $_),
+                                                       :@inner-regex-checks, :@inner-const-checks);
+            }
+            default {
+                die X::JSON::Schema::BadSchema.new:
+                    :$path, :reason("The additionalProperties property must be an object");
             }
         }
 

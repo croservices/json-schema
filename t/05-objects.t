@@ -79,4 +79,29 @@ throws-like
     }, 'patternProperties are matched';
 }
 
+throws-like
+    { JSON::Schema.new(schema => { additionalProperties => 2.5 }) },
+    X::JSON::Schema::BadSchema,
+    'Having minProperties property be a non-object is refused (Rat)';
+
+{
+    $schema = JSON::Schema.new(schema => {
+        properties => {
+            name => { type => 'string' },
+            id => { type => 'integer' }
+        },
+        patternProperties => {
+           '^foo$' => { type => 'string' },
+        },
+        additionalProperties => {
+            type => 'number'
+        }
+    });
+    $schema.validate({add1 => 1.0, add2 => 2.0}), 'Additional properties are accepted';
+    nok $schema.validate({add1 => 'add2', add2 => 2.0}), 'Additional properties are rejected';
+    ok $schema.validate({name => 'name', add1 => 1.0}), 'Additional properties do not interfere with named';
+    ok $schema.validate({foo => 'foo', add1 => 1.0}), 'Additional properties do not interfere with patterned';
+    ok $schema.validate({name => 'name', foo => 'foo', add1 => 1.0}), 'Additional properties do not interfere with named and patterned';
+}
+
 done-testing;
