@@ -396,7 +396,7 @@ class JSON::Schema {
             NumberCheck.new(:$path);
         }
         default {
-            die X::JSON::Schema::BadSchema.new(:$path, :reason("Unrecognized type '$_'"));
+            die X::JSON::Schema::BadSchema.new(:$path, :reason("Unrecognized type '{$_.^name}'"));
         }
     }
 
@@ -593,19 +593,6 @@ class JSON::Schema {
         with %schema<properties> {
             when Associative {
                 my %props = .map({ .key => check-for($path ~ "/properties/{.key}", %(.value)) });
-                with %schema<additionalProperties> {
-                    when $_ === True|False {
-                        push @checks, PropertiesCheck.new(:$path, :%props, add => $_);
-                    }
-                    when Associative {
-                        my $add = check-for($path ~ "/additionalProperties", $_);
-                        push @checks, PropertiesCheck.new(:$path, :%props, :$add);
-                    }
-                    default {
-                        die X::JSON::Schema::BadSchema.new:
-                            :$path, :reason("The additionalProperties property must be a boolean or an object");
-                    }
-                }
                 push @checks, PropertiesCheck.new(:$path, :%props, add => {});
             }
             default {

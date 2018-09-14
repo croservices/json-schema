@@ -14,12 +14,15 @@ my $schema;
     $schema = JSON::Schema.new(schema => {:type('string')});
     ok $schema.validate('hello'), 'Simple string validation accepts a string';
     nok $schema.validate(42), 'Simple string validation rejects an integer';
-    nok $schema.validate(Any), 'Simple string validation rejects a type object';
+    nok $schema.validate(Str), 'Simple string validation rejects a type object';
 }
 
 throws-like { JSON::Schema.new(schema => { type => ('string', 1) }) },
     X::JSON::Schema::BadSchema,
-    'When type is described as array, non-strings are impossible';
+    'When type is described as array, non-strings are rejected (Int)';
+throws-like { JSON::Schema.new(schema => { type => ('string', Str) }) },
+    X::JSON::Schema::BadSchema,
+    'When type is described as array, non-strings are rejected (Str type object)';
 throws-like { JSON::Schema.new(schema => { type => ('string', 'string') }) },
     X::JSON::Schema::BadSchema,
     'When type is described as array, items must be unique';
@@ -32,7 +35,7 @@ throws-like { JSON::Schema.new(schema => { type => ('string', 'namber') }) },
     ok $schema.validate('hello'), 'Simple string&integer validation accepts a string';
     ok $schema.validate(42), 'Simple string&integer validation accepts an integer';
     nok $schema.validate(666.666), 'Simple string&integer validation rejects a number';
-    nok $schema.validate(Any), 'Simple string&integer validation rejects a type object';
+    nok $schema.validate(Rat), 'Simple string&integer validation rejects a type object (Rat)';
 }
 
 {
@@ -44,6 +47,8 @@ throws-like { JSON::Schema.new(schema => { type => ('string', 'namber') }) },
 {
     $schema = JSON::Schema.new(schema => { type => 'boolean' });
     ok $schema.validate(True), 'Simple boolean validation accepts True';
+    ok $schema.validate(False), 'Simple boolean validation accepts False';
+    nok $schema.validate(Bool), 'Simple boolean validation rejects an Bool type object';
     nok $schema.validate(42), 'Simple boolean validation rejects an integer';
 }
 
