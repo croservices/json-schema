@@ -7,19 +7,25 @@ my $schema;
 throws-like { JSON::Schema.new(schema => { multipleOf => 'string' }) },
     X::JSON::Schema::BadSchema,
     'Having multipleOf property be a string is refused';
+throws-like { JSON::Schema.new(schema => { multipleOf => -10 }) },
+    X::JSON::Schema::BadSchema,
+    'Having multipleOf property be a negative number is refused';
+throws-like { JSON::Schema.new(schema => { multipleOf => 0 }) },
+    X::JSON::Schema::BadSchema,
+    'Having multipleOf property be 0 is refused';
 
 {
     $schema = JSON::Schema.new(schema => { type => "string", multipleOf => 3 });
     ok $schema.validate('hello'), 'Numeric checks are ignored if explicit type is not numeric';
-}
-
-{
     $schema = JSON::Schema.new(schema => { multipleOf => 3 });
     ok $schema.validate('hello'), 'Numeric checks are disabled when type is not set';
 }
 
 {
     $schema = JSON::Schema.new(schema => { type => "integer", multipleOf => 3 });
+    ok $schema.validate(9), '9 is multipleOf 3';
+    nok $schema.validate(10), '10 is not multipleOf 3';
+    $schema = JSON::Schema.new(schema => { multipleOf => 3 });
     ok $schema.validate(9), '9 is multipleOf 3';
     nok $schema.validate(10), '10 is not multipleOf 3';
 }

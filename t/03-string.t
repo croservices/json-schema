@@ -9,6 +9,10 @@ throws-like
     X::JSON::Schema::BadSchema,
     'Having minLength property be an non-integer is refused (Rat)';
 throws-like
+    { JSON::Schema.new(schema => { minLength => -1 }) },
+    X::JSON::Schema::BadSchema,
+    'Having minLength property be negative number is refused';
+throws-like
     { JSON::Schema.new(schema => { minLength => '4' }) },
     X::JSON::Schema::BadSchema,
     'Having minLength property be an non-integer is refused (Str)';
@@ -17,6 +21,10 @@ throws-like
     { JSON::Schema.new(schema => { maxLength => 4.5 }) },
     X::JSON::Schema::BadSchema,
     'Having maxLength property be an non-integer is refused (Rat)';
+throws-like
+    { JSON::Schema.new(schema => { maxLength => -1 }) },
+    X::JSON::Schema::BadSchema,
+    'Having maxLength property be negative number is refused';
 throws-like
     { JSON::Schema.new(schema => { maxLength => '4' }) },
     X::JSON::Schema::BadSchema,
