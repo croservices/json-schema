@@ -417,6 +417,22 @@ class JSON::Schema {
         }
     }
 
+    my class ConditionalCheck does Check {
+        has Check $.if;
+        has Check $.then;
+        has Check $.else;
+
+        method check($value --> Nil) {
+            try $!if.check($value);
+            if !$!.defined {
+                $!then.check($value);
+            }
+            else {
+                $!else.check($value);
+            }
+        }
+    }
+
     has Check $!check;
 
     submethod BUILD(:%schema! --> Nil) {
@@ -714,6 +730,29 @@ class JSON::Schema {
             default {
                 die X::JSON::Schema::BadSchema.new:
                     :$path, :reason("The dependencies property must be an object");
+            }
+        }
+
+        my $then = %schema<then>;
+        if $then.defined && $then !~~ Associative {
+            die X::JSON::Schema::BadSchema.new:
+            :$path, :reason("The then property must be an object");
+        }
+        my $else = %schema<else>;
+        if $else.defined && $else !~~ Associative {
+            die X::JSON::Schema::BadSchema.new:
+            :$path, :reason("The else property must be an object");
+        }
+
+        with %schema<if> {
+            unless $_ ~~ Associative {
+                die X::JSON::Schema::BadSchema.new:
+                    :$path, :reason("The if property must be an object");
+            }
+            if $then.defined || $else.defined {
+                push @checks, ConditionalCheck.new(if => check-for($path, $_),
+                                                   then => $then.defined ?? check-for($path, $then) !! Nil,
+                                                   else => $else.defined ?? check-for($path, $else) !! Nil);
             }
         }
 
