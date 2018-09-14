@@ -28,8 +28,8 @@ To implement
   * [x] required
   * [x] properties
   * [x] patternProperties
-  * [ ] additionalProperties
-  * [ ] dependencies
+  * [x] additionalProperties
+  * [x] dependencies
   * [ ] propertyNames
 * [ ] Conditional sub-schemas
 * [ ] Apply sub-schemas with boolean logic

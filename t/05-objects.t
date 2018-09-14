@@ -97,11 +97,43 @@ throws-like
             type => 'number'
         }
     });
-    $schema.validate({add1 => 1.0, add2 => 2.0}), 'Additional properties are accepted';
+    ok $schema.validate({add1 => 1.0, add2 => 2.0}), 'Additional properties are accepted';
     nok $schema.validate({add1 => 'add2', add2 => 2.0}), 'Additional properties are rejected';
     ok $schema.validate({name => 'name', add1 => 1.0}), 'Additional properties do not interfere with named';
     ok $schema.validate({foo => 'foo', add1 => 1.0}), 'Additional properties do not interfere with patterned';
     ok $schema.validate({name => 'name', foo => 'foo', add1 => 1.0}), 'Additional properties do not interfere with named and patterned';
+}
+
+throws-like
+    { JSON::Schema.new(schema => { dependencies => 2.5 }) },
+    X::JSON::Schema::BadSchema,
+    'Having dependencies property be a non-object is refused (Rat)';
+throws-like
+    { JSON::Schema.new(schema => { dependencies => { a => 1 } }) },
+    X::JSON::Schema::BadSchema,
+    'Having dependencies property value be non-object is refused (Int)';
+throws-like
+    { JSON::Schema.new(schema => { dependencies => { a => ('foo', 1) } }) },
+    X::JSON::Schema::BadSchema,
+    'Having dependencies property value in array form with non-string inside is refused (Int)';
+
+{
+    $schema = JSON::Schema.new(schema => {
+        dependencies => {
+            name => { minProperties => 3 }
+        }
+    });
+    ok $schema.validate({name => 'hello', foo => 1, bar => 3}), 'Correct dependant value is accepted';
+    nok $schema.validate({name => 'hello'}), 'Incorrect dependant value is rejected';
+    ok $schema.validate({foo => 'bar'}), 'dependencies property is not checked when absent';
+    $schema = JSON::Schema.new(schema => {
+        dependencies => {
+            name => ('surname', 'age')
+        }
+    });
+    ok $schema.validate({name => 'hello', surname => 1, age => 1}), 'Required values by dependency array are accepted';
+    nok $schema.validate({name => 'hello'}), 'Object with missing dependant properties is rejected';
+    ok $schema.validate({foo => 'bar'}), 'dependencies property is not checked when absent';
 }
 
 done-testing;

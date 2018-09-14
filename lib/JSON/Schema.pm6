@@ -399,6 +399,14 @@ class JSON::Schema {
         }
     }
 
+    my class DependencyCheck does Check {
+        has Str $.prop;
+        has Check $.check;
+        method check($value --> Nil) {
+            $!check.check($value) if $value ~~ Associative && $value{$!prop};
+        }
+    }
+
     has Check $!check;
 
     submethod BUILD(:%schema! --> Nil) {
@@ -672,6 +680,30 @@ class JSON::Schema {
             default {
                 die X::JSON::Schema::BadSchema.new:
                     :$path, :reason("The additionalProperties property must be an object");
+            }
+        }
+
+        with %schema<dependencies> {
+            when Associative {
+                for .kv -> $prop, $_ {
+                    if $_ !~~ Associative|Positional {
+                        die X::JSON::Schema::BadSchema.new:
+                            :$path, :reason("The dependencies properties values must be an object or a list");
+                    }
+                    if $_ ~~ Positional && not .map(* ~~ Str).all {
+                        die X::JSON::Schema::BadSchema.new:
+                            :$path, :reason("The dependencies property array value must contain only string objects");
+                    }
+
+                    my $check = $_ ~~ Positional ??
+                        RequiredCheck.new(:$path, prop => @$_) !!
+                        check-for($path, $_);
+                    push @checks, DependencyCheck.new(:$path, :$prop, :$check);
+                }
+            }
+            default {
+                die X::JSON::Schema::BadSchema.new:
+                    :$path, :reason("The dependencies property must be an object");
             }
         }
 
