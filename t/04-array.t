@@ -1,4 +1,3 @@
-use OpenAPI::Schema::Validate;
 use Test;
 use JSON::Schema;
 
