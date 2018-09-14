@@ -57,6 +57,39 @@ class JSON::Schema {
         }
     }
 
+    my class OneCheck does Check {
+        has @.checks;
+        method check($value --> Nil) {
+            my $check = False;
+            for @!checks.kv -> $i, $c {
+                $c.check($value);
+                if $check {
+                    return fail X::JSON::Schema::Failed.new:
+                        :$!path, :reason('Value passed more than one check');
+                } else {
+                    $check = True;
+                }
+                CATCH {
+                    when X::JSON::Schema::Failed {}
+                }
+            }
+        }
+    }
+
+    my class NotCheck does Check {
+        has Check $.check;
+        method check($value --> Nil) {
+            $!check.check($value);
+            CATCH {
+                when X::JSON::Schema::Failed {
+                    return;
+                }
+            }
+            fail X::JSON::Schema::Failed.new:
+                :$!path, :reason('Value passed check check');
+        }
+    }
+
     my role TypeCheck does Check {
         method check($value --> Nil) {
             unless $value.defined && $value ~~ $.type {
@@ -764,6 +797,51 @@ class JSON::Schema {
             default {
                 die X::JSON::Schema::BadSchema.new:
                     :$path, :reason("The propertyNames property must be an object");
+            }
+        }
+
+        with %schema<allOf> {
+            when Positional {
+                push @checks, AllCheck.new(:path("$path/allOf"),
+                                           native => False,
+                                           checks => .map({ check-for($path ~ '/allOf', $_); }));
+            }
+            default {
+                die X::JSON::Schema::BadSchema.new:
+                    :$path, :reason("The allOf property must be an array");
+            }
+        }
+
+        with %schema<anyOf> {
+            when Positional {
+                push @checks, OrCheck.new(:path("$path/anyOf"),
+                                          checks => .map({ check-for($path ~ '/anyOf', $_); }));
+            }
+            default {
+                die X::JSON::Schema::BadSchema.new:
+                    :$path, :reason("The anyOf property must be an array");
+            }
+        }
+
+        with %schema<oneOf> {
+            when Positional {
+                push @checks, OneCheck.new(:path("$path/oneOf"),
+                                           checks => .map({ check-for($path ~ '/oneOf', $_); }));
+            }
+            default {
+                die X::JSON::Schema::BadSchema.new:
+                    :$path, :reason("The oneOf property must be an array");
+            }
+        }
+
+        with %schema<not> {
+            when Associative {
+                push @checks, NotCheck.new(:path("$path/not"),
+                                           check => check-for($path ~ '/not', $_));
+            }
+            default {
+                die X::JSON::Schema::BadSchema.new:
+                    :$path, :reason("The not property must be an object");
             }
         }
 

@@ -31,9 +31,9 @@ To implement
   * [x] additionalProperties
   * [x] dependencies
   * [x] propertyNames
-* [ ] Conditional sub-schemas
-* [ ] Apply sub-schemas with boolean logic
-  * [ ] allOf
-  * [ ] anyOf
-  * [ ] oneOf
-  * [ ] not
+* [x] Conditional sub-schemas
+* [x] Apply sub-schemas with boolean logic
+  * [x] allOf
+  * [x] anyOf
+  * [x] oneOf
+  * [x] not
