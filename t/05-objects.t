@@ -123,6 +123,7 @@ throws-like
             name => { minProperties => 3 }
         }
     });
+    ok $schema.validate(5), 'dependencies property is not checked when value is not an object (Int)';
     ok $schema.validate({name => 'hello', foo => 1, bar => 3}), 'Correct dependant value is accepted';
     nok $schema.validate({name => 'hello'}), 'Incorrect dependant value is rejected';
     ok $schema.validate({foo => 'bar'}), 'dependencies property is not checked when absent';
@@ -134,6 +135,24 @@ throws-like
     ok $schema.validate({name => 'hello', surname => 1, age => 1}), 'Required values by dependency array are accepted';
     nok $schema.validate({name => 'hello'}), 'Object with missing dependant properties is rejected';
     ok $schema.validate({foo => 'bar'}), 'dependencies property is not checked when absent';
+}
+
+throws-like
+    { JSON::Schema.new(schema => { propertyNames => -1 }) },
+    X::JSON::Schema::BadSchema,
+    'Having propertyNames property be a non-object is refused (Int)';
+
+{
+    $schema = JSON::Schema.new(schema => {
+        propertyNames => {
+            minLength => 5,
+            pattern => '^foo'
+        }
+    });
+    ok $schema.validate(5), 'dependencies property is not checked when value is not an object (Int)';
+    ok $schema.validate({foobar => 1, foobaz => 2}), 'Object properties with valid names are accepted';
+    nok $schema.validate({foo => 1}), 'Object property with too short name is rejected';
+    nok $schema.validate({barbarbug => 1}), 'Object property with name out of pattern is rejected';
 }
 
 done-testing;

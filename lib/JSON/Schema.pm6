@@ -407,6 +407,16 @@ class JSON::Schema {
         }
     }
 
+    my class PropertyNamesCheck does Check {
+        has Check $.check;
+
+        method check($value --> Nil) {
+            if $value ~~ Associative {
+                $!check.check($_) for $value.keys;
+            }
+        }
+    }
+
     has Check $!check;
 
     submethod BUILD(:%schema! --> Nil) {
@@ -704,6 +714,17 @@ class JSON::Schema {
             default {
                 die X::JSON::Schema::BadSchema.new:
                     :$path, :reason("The dependencies property must be an object");
+            }
+        }
+
+        with %schema<propertyNames> {
+            when Associative {
+                my $check = check-for($path, $_);
+                push @checks, PropertyNamesCheck.new(:$path, :$check);
+            }
+            default {
+                die X::JSON::Schema::BadSchema.new:
+                    :$path, :reason("The propertyNames property must be an object");
             }
         }
 

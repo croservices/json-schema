@@ -22,7 +22,7 @@ To implement
   * [x] minItems
   * [x] uniqueItems
   * [x] contains
-* [ ] Object
+* [x] Object
   * [x] maxProperties
   * [x] minProperties
   * [x] required
@@ -30,7 +30,7 @@ To implement
   * [x] patternProperties
   * [x] additionalProperties
   * [x] dependencies
-  * [ ] propertyNames
+  * [x] propertyNames
 * [ ] Conditional sub-schemas
 * [ ] Apply sub-schemas with boolean logic
   * [ ] allOf
