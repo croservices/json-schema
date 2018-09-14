@@ -56,6 +56,7 @@ throws-like { JSON::Schema.new(schema => { type => ('string', 'namber') }) },
     $schema = JSON::Schema.new(schema => { type => 'object' });
     ok $schema.validate({}), 'Simple object validation accepts empty hash';
     ok $schema.validate((one => 1).Hash), 'Simple object validation accepts hash';
+    nok $schema.validate(Associative), 'Simple object validation rejects Associative type object';
     nok $schema.validate(42), 'Simple object validation rejects an integer';
 }
 
@@ -63,6 +64,7 @@ throws-like { JSON::Schema.new(schema => { type => ('string', 'namber') }) },
     $schema = JSON::Schema.new(schema => { type => 'array' });
     ok $schema.validate(()), 'Simple array validation accepts empty list';
     ok $schema.validate((1, 2, 3)), 'Simple array validation accepts list';
+    nok $schema.validate(Positional), 'Simple array validation rejects Positional type object';
     nok $schema.validate(42), 'Simple array validation rejects an integer';
 }
 
@@ -70,16 +72,24 @@ throws-like { JSON::Schema.new(schema => { type => ('string', 'namber') }) },
     $schema = JSON::Schema.new(schema => { type => 'number' });
     ok $schema.validate(666.666), 'Simple number validation accepts a number';
     nok $schema.validate(42), 'Simple number validation rejects an integer';
-    nok $schema.validate(Any), 'Simple number validation rejects a type object';
+    nok $schema.validate({}), 'Simple number validation rejects a hash';
+    nok $schema.validate(Rat), 'Simple number validation rejects a type object (Rat)';
 }
 
+throws-like { JSON::Schema.new(schema => { enum => 42 }) },
+    X::JSON::Schema::BadSchema,
+    'Having enum property be an integer is refused';
+
 {
-    $schema = JSON::Schema.new(schema => { enum => (1, Nil, 'String') });
+    $schema = JSON::Schema.new(schema => { enum => (1, Nil, 'String', (1, Nil, 2), { foo => 'bar' }) });
     ok $schema.validate(Nil), 'Nil is accepted';
     ok $schema.validate(1), 'Correct integer is accepted';
     nok $schema.validate(2), 'Incorrect integer is rejected';
     ok $schema.validate('String'), 'Correct string is accepted';
     nok $schema.validate('Strign'), 'Incorrect string is rejected';
+    nok $schema.validate((1, Nil, 'String').List), 'Equal enum is rejected';
+    ok $schema.validate((1, Nil, 2).List), 'Correct array is accepted';
+    ok $schema.validate((foo => 'bar').Hash), 'Correct object is accepted';
 }
 
 {
