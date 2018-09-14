@@ -1,3 +1,4 @@
+use v6;
 use Test;
 use JSON::Schema;
 
@@ -57,6 +58,8 @@ throws-like
 {
     $schema = JSON::Schema.new(schema => { additionalItems => { type => 'string' } });
     ok $schema.validate((1, 2, 3).List), 'additionalItems property without items property is omitted';
+    $schema = JSON::Schema.new(schema => { items => { type => 'integer' }, additionalItems => { type => 'string' } });
+    ok $schema.validate((1, 2, 3).List), 'additionalItems property without items property being array os schemas is omitted';
     $schema = JSON::Schema.new(schema => {
         items => ({ type => 'integer' }, { type => 'string' }), additionalItems => { type => 'number' }
     });
@@ -68,6 +71,14 @@ throws-like
     { JSON::Schema.new(schema => { minItems => 4.5 }) },
     X::JSON::Schema::BadSchema,
     'Having minItems property be a non-integer is refused (Rat)';
+throws-like
+    { JSON::Schema.new(schema => { maxItems => -1 }) },
+    X::JSON::Schema::BadSchema,
+    'Having maxItems property be a nagative integer is refused';
+throws-like
+    { JSON::Schema.new(schema => { minItems => -1 }) },
+    X::JSON::Schema::BadSchema,
+    'Having minItems property be a negative integer is refused';
 throws-like
     { JSON::Schema.new(schema => { maxItems => '4' }) },
     X::JSON::Schema::BadSchema,
