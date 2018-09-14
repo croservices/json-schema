@@ -119,7 +119,7 @@ class JSON::Schema {
         method check($value --> Nil) {
             unless $value eqv $!const {
                 die X::JSON::Schema::Failed.new:
-                    :$!path, :reason("Value '$value' does not match with constant $!const");   
+                    :$!path, :reason("Value '{$value.perl}' does not match with constant $!const");
             }
         }
     }

@@ -94,9 +94,21 @@ throws-like { JSON::Schema.new(schema => { enum => 42 }) },
 
 {
     $schema = JSON::Schema.new(schema => { const => 1, type => 'integer' });
-    ok $schema.validate(1), 'Constant 1 is accepted';
-    nok $schema.validate(2), 'Incorrect constant value is rejected 1';
+    ok $schema.validate(1), 'Constant integer value (1) is accepted';
+    nok $schema.validate(2), 'Incorrect constant value is rejected';
     nok $schema.validate(Int), 'Incorrect constant value is rejected 2';
+    $schema = JSON::Schema.new(schema => { const => (1, 2, 3), type => 'array' });
+    nok $schema.validate(list), 'Empty list is rejected';
+    ok $schema.validate((1, 2, 3).List), 'Constant array is accepted';
+    nok $schema.validate((1, 2, 3, 4).List), 'Incorrect constant value is rejected (too large)';
+    nok $schema.validate((1, 2).List), 'Incorrect constant value is rejected (too small)';
+    nok $schema.validate(Positional), 'Incorrect constant value is rejected 3';
+    $schema = JSON::Schema.new(schema => { const => {foo => 1} });
+    nok $schema.validate(hash), 'Empty hash is rejected';
+    ok $schema.validate({foo => 1}), 'Constant object is accepted 3';
+    nok $schema.validate((foo => 1, bar => 2)), 'Incorrect constant value is rejected (too large)';
+    nok $schema.validate({}), 'Incorrect constant value is rejected (too small)';
+    nok $schema.validate(Associative), 'Incorrect constant value is rejected 3';
 }
 
 done-testing;
