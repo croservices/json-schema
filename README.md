@@ -7,6 +7,14 @@ SYNOPSIS
 ========
 
     use JSON::Schema;
+    my $schema = JSON::Schema.new(
+        schema => from-json '{ "type": "string" }'
+    );
+
+    # Validate it and use the result as a boolean.
+    say so $schema.validate("foo");     # True
+    say so $schema.validate(42);        # False
+    say so $schema.validate(Str);       # False
 
 DESCRIPTION
 ===========
