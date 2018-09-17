@@ -154,7 +154,7 @@ class JSON::Schema {
 
     my class NumberCheck does TypeCheck {
         has $.reason = 'Not a number';
-        has $.type = Rat;
+        has $.type = Rat|Num;
     }
 
     my class StringCheck does TypeCheck {

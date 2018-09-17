@@ -71,6 +71,7 @@ throws-like { JSON::Schema.new(schema => { type => ('string', 'namber') }) },
 {
     $schema = JSON::Schema.new(schema => { type => 'number' });
     ok $schema.validate(666.666), 'Simple number validation accepts a number';
+    ok $schema.validate(42.Num), 'Simple number validation rejects a number (Num)';
     nok $schema.validate(42), 'Simple number validation rejects an integer';
     nok $schema.validate({}), 'Simple number validation rejects a hash';
     nok $schema.validate(Rat), 'Simple number validation rejects a type object (Rat)';
