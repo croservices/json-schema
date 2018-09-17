@@ -50,6 +50,7 @@ throws-like { JSON::Schema.new(schema => { not => 42 }) },
     });
     ok $schema.validate(1), 'oneOf accepted single-matched integer';
     nok $schema.validate('string'), 'oneOf rejected string matched twice';
+    nok $schema.validate(3.5), 'oneOf rejected never matched Rat';
 }
 
 {

@@ -84,17 +84,25 @@ class JSON::Schema {
         has @.checks;
         method check($value --> Nil) {
             my $check = False;
+            my $failed = False;
             for @!checks.kv -> $i, $c {
                 $c.check($value);
                 if $check {
-                    return fail X::JSON::Schema::Failed.new:
-                        :$!path, :reason('Value passed more than one check');
+                    $failed = True;
                 } else {
                     $check = True;
                 }
                 CATCH {
                     when X::JSON::Schema::Failed {}
                 }
+            }
+            if $failed {
+                die X::JSON::Schema::Failed.new:
+                :$!path, :reason('Value passed more than a single check');
+            }
+            unless $check {
+                die X::JSON::Schema::Failed.new:
+                    :$!path, :reason('Value does not passed a single check') unless $check;
             }
         }
     }
