@@ -6,7 +6,8 @@
     "meta-version" : "0",
     "depends" : [ "Cro::Core", "DateTime::Parse", "JSON::Pointer" ],
     "authors" : [
-        "Alexander Kiryuhin <alexander.kiryuhin@gmail.com>"
+        "Alexander Kiryuhin <alexander.kiryuhin@gmail.com>",
+        "Jonathan Worthington <jonathan@edument.se>"
     ],
     "provides" : {
         "JSON::Schema" : "lib/JSON/Schema.pm6",
