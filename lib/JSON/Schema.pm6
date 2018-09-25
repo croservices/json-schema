@@ -375,9 +375,13 @@ class JSON::Schema {
     my class RequiredCheck does Check {
         has Str @.prop;
         method check($value --> Nil) {
-            if $value ~~ Associative && not [&&] $value{@!prop}.map(*.defined) {
-                die X::JSON::Schema::Failed.new:
-                    :$!path, :reason("Object does not have required property");
+            if $value ~~ Associative {
+                for @.prop -> $mandatory_prop {
+                    unless $value{$mandatory_prop}:exists {
+                        die X::JSON::Schema::Failed.new:
+                            :$!path, :reason("Missing required property '$mandatory_prop'");
+                    }
+                }
             }
         }
     }
