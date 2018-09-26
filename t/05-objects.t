@@ -32,6 +32,7 @@ throws-like
         type => 'object',
         required => <a b>
     });
+    throws-like $schema.validate({}), X::JSON::Schema::Failed, message => /\'a\' ', ' \'b\'/;
     nok $schema.validate({a => 1}), 'Object without required attribute rejected';
     ok $schema.validate({a => 1, b => 2}), 'Object with all required attributes accepted';
     ok $schema.validate({a => 1, b => 2, c => 3}), 'Object that has additional attributes besides required accepted';
