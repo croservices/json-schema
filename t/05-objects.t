@@ -105,6 +105,17 @@ throws-like
     ok $schema.validate({name => 'name', foo => 'foo', add1 => 1.0}), 'Additional properties do not interfere with named and patterned';
 }
 
+{
+    $schema = JSON::Schema.new(schema => {
+        properties => {
+            name => { type => 'string' }
+        },
+        additionalProperties => False
+    });
+    ok $schema.validate({name => "foo"}), 'Valid property is accepted';
+    nok $schema.validate({name => "foo", bar => 2}), 'Additional property is rejected';
+}
+
 throws-like
     { JSON::Schema.new(schema => { dependencies => 2.5 }) },
     X::JSON::Schema::BadSchema,

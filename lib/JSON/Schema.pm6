@@ -645,7 +645,7 @@ class JSON::Schema {
         }
 
         with %schema<items> {
-            when Associative {
+            when Associative|Bool:D {
                 push @checks, ItemsByObjectCheck.new(:$path, check => check-for($path ~ '/items', $_, :%formats, :%add-formats));
             }
             when Positional {
@@ -665,7 +665,7 @@ class JSON::Schema {
 
         with %schema<additionalItems> {
             when Associative {
-                if %schema<items> ~~ Positional {
+                if %schema<items> ~~ Positional|Bool:D {
                     my $check = check-for($path ~ '/additionalProperties', $_, :%formats, :%add-formats);
                     push @checks, AdditionalItemsCheck.new(:$path, :$check, size => %schema<items>.elems);
                 }
@@ -701,7 +701,7 @@ class JSON::Schema {
         }
 
         with %schema<contains> {
-            when Associative {
+            when Associative|Bool:D {
                 my $check = check-for($path ~ '/contains', $_, :%formats, :%add-formats);
                 push @checks, ContainsCheck.new(:$path, :$check);
             }
@@ -747,7 +747,7 @@ class JSON::Schema {
 
         with %schema<properties> {
             when Associative {
-                unless .values.map(* ~~ Associative).all {
+                unless .values.map(* ~~ Associative|Bool:D).all {
                     die X::JSON::Schema::BadSchema.new:
                     :$path, :reason("The properties property inner values must be an object");
                 }
@@ -776,7 +776,7 @@ class JSON::Schema {
         }
 
         with %schema<additionalProperties> {
-            when Associative {
+            when Associative|Bool:D {
                 my @inner-const-checks;
                 my @inner-regex-checks;
                 with %schema<properties> {
@@ -846,7 +846,7 @@ class JSON::Schema {
         }
 
         with %schema<propertyNames> {
-            when Associative {
+            when Associative|Bool:D {
                 my $check = check-for($path ~ '/propertyNames', $_, :%formats, :%add-formats);
                 push @checks, PropertyNamesCheck.new(:$path, :$check);
             }
