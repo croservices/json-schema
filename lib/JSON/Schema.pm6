@@ -509,10 +509,17 @@ class JSON::Schema {
         }
     }
 
+    my class TrueCheck does Check {
+        method check($value --> Nil) { True }
+    }
+    my class FalseCheck does Check {
+        method check($value --> Nil) { die X::JSON::Schema::Failed.new(:$!path, :reason("False schema is failed")) }
+    }
+
     has Check $!check;
 
-    submethod BUILD(:%schema!, :%formats = %DEFAULT-FORMAT, :%add-formats = {} --> Nil) {
-        $!check = check-for('root', %schema, :%formats, :%add-formats);
+    submethod BUILD(:$schema!, :%formats = %DEFAULT-FORMAT, :%add-formats = {} --> Nil) {
+        $!check = check-for('root', $schema, :%formats, :%add-formats);
     }
 
     sub check-for-type($path, $_) {
@@ -542,7 +549,13 @@ class JSON::Schema {
         }
     }
 
-    sub check-for($path, %schema, :%formats, :%add-formats) {
+    sub check-for($path, $schema, :%formats, :%add-formats) {
+        if $schema ~~ Bool:D {
+            return $schema ?? TrueCheck.new(:$path) !! FalseCheck.new(:$path);
+        }
+
+        my %schema = $schema;
+
         my @checks;
 
         with %schema<type> {

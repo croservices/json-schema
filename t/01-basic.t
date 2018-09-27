@@ -11,6 +11,21 @@ throws-like { JSON::Schema.new(schema => { type => 'namber' }) },
 
 my $schema;
 {
+    $schema = JSON::Schema.new(schema => False);
+    subtest {
+        nok $schema.validate(42);
+        nok $schema.validate({foo => 5});
+        nok $schema.validate('hello');
+    }, 'False schema fails for simple examples';
+    $schema = JSON::Schema.new(schema => True);
+    subtest {
+        ok $schema.validate(42);
+        ok $schema.validate({foo => 5});
+        ok $schema.validate('hello');
+    }, 'True schema succeeds for simple examples';
+}
+
+{
     $schema = JSON::Schema.new(schema => {:type('string')});
     ok $schema.validate('hello'), 'Simple string validation accepts a string';
     nok $schema.validate(42), 'Simple string validation rejects an integer';
