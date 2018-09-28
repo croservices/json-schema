@@ -123,7 +123,7 @@ class JSON::Schema {
 
     my role TypeCheck does Check {
         method check($value --> Nil) {
-            unless $value.defined && $value ~~ $.type {
+            unless $value ~~ $.type {
                 die X::JSON::Schema::Failed.new(path => $.path, reason => $.reason);
             }
         }
@@ -138,33 +138,34 @@ class JSON::Schema {
     }
 
     my class BooleanCheck does TypeCheck {
+        subset BoolDefined where { $_ eqv True || $_ eqv False }
         has $.reason = 'Not a boolean';
-        has $.type = Bool;
+        has $.type = BoolDefined;
     }
 
     my class ObjectCheck does TypeCheck {
         has $.reason = 'Not an object';
-        has $.type = Associative;
+        has $.type = Associative:D;
     }
 
     my class ArrayCheck does TypeCheck {
         has $.reason = 'Not an array';
-        has $.type = Positional;
+        has $.type = Positional:D;
     }
 
     my class NumberCheck does TypeCheck {
         has $.reason = 'Not a number';
-        has $.type = Rat|Num;
+        has $.type = Rat:D|Num:D;
     }
 
     my class StringCheck does TypeCheck {
         has $.reason = 'Not a string';
-        has $.type = Str;
+        has $.type = Str:D;
     }
 
     my class IntegerCheck does TypeCheck {
         has $.reason = 'Not an integer';
-        has $.type = Int;
+        has $.type = Int:D;
     }
 
     my class EnumCheck does Check {
@@ -238,7 +239,7 @@ class JSON::Schema {
         method check($value --> Nil) {
             if $value ~~ Str:D && $value.codes < $!value {
                 die X::JSON::Schema::Failed.new:
-                    :$!path, :reason("String is less than $!value codepoints");
+                    :$!path, :reason("String has less than $!value codepoints");
             }
         }
     }
@@ -246,9 +247,9 @@ class JSON::Schema {
     my class MaxLengthCheck does Check {
         has Int $.value;
         method check($value --> Nil) {
-            if $value ~~ Str && $value.defined && $value.codes > $!value {
+            if $value ~~ Str:D && $value.codes > $!value {
                 die X::JSON::Schema::Failed.new:
-                    :$!path, :reason("String is more than $!value codepoints");
+                    :$!path, :reason("String has more than $!value codepoints");
             }
         }
     }
@@ -261,7 +262,7 @@ class JSON::Schema {
             $!rx = EVAL 'rx:P5/' ~ $!pattern ~ '/';
         }
         method check($value --> Nil) {
-            if $value ~~ Str && $value !~~ $!rx {
+            if $value ~~ Str:D && $value !~~ $!rx {
                 die X::JSON::Schema::Failed.new:
                     :$!path, :reason("String does not match /$!pattern/");
             }
@@ -387,7 +388,7 @@ class JSON::Schema {
         has Check %.props;
         has $.add;
         method check($value --> Nil) {
-            if $value ~~ Associative && $value.defined {
+            if $value ~~ Associative:D {
                 if $!add === True {
                     for (%!props.keys (&) $value.keys).keys -> $key {
                         %!props{$key}.check($value{$key});
@@ -418,7 +419,7 @@ class JSON::Schema {
         has @.regex-checks;
 
         method check($value --> Nil) {
-            return if $value !~~ Associative || !$value.defined;
+            return if $value !~~ Associative:D;
             for $value.kv -> $prop, $val {
                 for @!regex-checks {
                     my $regex = .key;
@@ -438,7 +439,7 @@ class JSON::Schema {
         has Check $.check;
 
         method check($value --> Nil) {
-            return if $value !~~ Associative || !$value.defined;
+            return if $value !~~ Associative:D;
             for $value.kv -> $prop, $val {
                 my $already-checked = False;
                 for @!inner-const-checks {
