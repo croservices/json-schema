@@ -63,7 +63,7 @@ throws-like { JSON::Schema.new(schema => { type => ('string', 'namber') }) },
     $schema = JSON::Schema.new(schema => { type => 'boolean' });
     ok $schema.validate(True), 'Simple boolean validation accepts True';
     ok $schema.validate(False), 'Simple boolean validation accepts False';
-    nok $schema.validate(Bool), 'Simple boolean validation rejects an Bool type object';
+    nok $schema.validate(Bool), 'Simple boolean validation rejects a Bool type object';
     nok $schema.validate(42), 'Simple boolean validation rejects an integer';
 }
 
