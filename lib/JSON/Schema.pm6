@@ -339,7 +339,7 @@ class JSON::Schema {
         has Check $.check;
 
         method check($value --> Nil) {
-            if $value ~~ Positional {
+            if $value ~~ Positional:D {
                 for @$value -> $item {
                     CATCH {
                         when X::JSON::Schema::Failed {}
@@ -356,7 +356,7 @@ class JSON::Schema {
     my class MinPropertiesCheck does Check {
         has Int $.min;
         method check($value --> Nil) {
-            if $value ~~ Associative && $value.values < $!min {
+            if $value ~~ Associative:D && $value.values < $!min {
                 die X::JSON::Schema::Failed.new:
                     :$!path, :reason("Object has less than $!min properties");
             }
@@ -366,7 +366,7 @@ class JSON::Schema {
     my class MaxPropertiesCheck does Check {
         has Int $.max;
         method check($value --> Nil) {
-            if $value ~~ Associative && $value.values > $!max {
+            if $value ~~ Associative:D && $value.values > $!max {
                 die X::JSON::Schema::Failed.new:
                     :$!path, :reason("Object has more than $!max properties");
             }
@@ -376,7 +376,7 @@ class JSON::Schema {
     my class RequiredCheck does Check {
         has Str @.prop;
         method check($value --> Nil) {
-            if $value ~~ Associative and @!prop.grep({ not $value{$_}.defined }) -> @missing {
+            if $value ~~ Associative:D and @!prop.grep({ not $value{$_}.defined }) -> @missing {
                 die X::JSON::Schema::Failed.new:
                     :$!path,
                     :reason("Missing required properties: @missing.map({ qq/'$_'/ }).join(', ')");
@@ -477,7 +477,7 @@ class JSON::Schema {
         has Check $.check;
 
         method check($value --> Nil) {
-            if $value ~~ Associative {
+            if $value ~~ Associative:D {
                 $!check.check($_) for $value.keys;
             }
         }
@@ -551,8 +551,11 @@ class JSON::Schema {
     }
 
     sub check-for($path, $schema, :%formats, :%add-formats) {
-        if $schema ~~ Bool:D {
+        if $schema ~~ { $_ eqv True || $_ eqv False } {
             return $schema ?? TrueCheck.new(:$path) !! FalseCheck.new(:$path);
+        }
+        unless $schema ~~ Associative:D {
+            die X::JSON::Schema::BadSchema.new(:$path, :reason("JSON Schema must be either Associative or defined Bool value"));
         }
 
         my %schema = $schema;
@@ -560,11 +563,11 @@ class JSON::Schema {
         my @checks;
 
         with %schema<type> {
-            when Str {
+            when Str:D {
                 push @checks, check-for-type($path, $_);
             }
-            when List {
-                unless (all $_) ~~ Str {
+            when List:D {
+                unless .all ~~ Str:D {
                     die X::JSON::Schema::BadSchema.new:
                       :$path, :reason("Non-string elements are present in type constraint");
                 }
@@ -583,7 +586,7 @@ class JSON::Schema {
         }
 
         with %schema<enum> {
-            unless $_ ~~ Positional {
+            unless $_ ~~ Positional:D {
                 die X::JSON::Schema::BadSchema.new:
                 :$path, :reason("enum property value must be an array");
             }
@@ -595,7 +598,7 @@ class JSON::Schema {
         }
 
         with %schema<multipleOf> {
-            when $_ ~~ Int && $_ > 0 {
+            when $_ ~~ UInt:D && $_ != 0 {
                 push @checks, MultipleOfCheck.new(:$path, multi => $_);
             }
             default {
@@ -608,7 +611,7 @@ class JSON::Schema {
                        maximum => MaxCheck, maximumExclusive => MaxExCheck;
         for %num-keys.kv -> $k, $v {
             with %schema{$k} {
-                unless $_ ~~ Real {
+                unless $_ ~~ Real:D {
                     die X::JSON::Schema::BadSchema.new:
                         :$path, :reason("The $k property must be a number");
                 }
@@ -619,7 +622,7 @@ class JSON::Schema {
         my %str-keys = minLength => MinLengthCheck, maxLength => MaxLengthCheck;
         for %str-keys.kv -> $prop, $check {
             with %schema{$prop} {
-                when UInt {
+                when UInt:D {
                     push @checks, $check.new(:$path, value => $_);
                 }
                 default {
@@ -630,7 +633,7 @@ class JSON::Schema {
         }
 
         with %schema<pattern> {
-            when Str {
+            when Str:D {
                 if ECMA262Regex.parse($_) {
                     push @checks, PatternCheck.new(:$path, :pattern($_));
                 }
@@ -646,11 +649,11 @@ class JSON::Schema {
         }
 
         with %schema<items> {
-            when Associative|Bool:D {
+            when Associative:D|{$_ eqv True || $_ eqv False} {
                 push @checks, ItemsByObjectCheck.new(:$path, check => check-for($path ~ '/items', $_, :%formats, :%add-formats));
             }
-            when Positional {
-                unless ($_.all) ~~ Hash {
+            when Positional:D {
+                unless $_.all ~~ Hash:D {
                     die X::JSON::Schema::BadSchema.new:
                     :$path, :reason("The item property array must contain only objects");
                 }
@@ -665,8 +668,8 @@ class JSON::Schema {
         }
 
         with %schema<additionalItems> {
-            when Associative {
-                if %schema<items> ~~ Positional|Bool:D {
+            when Associative:D {
+                if %schema<items> ~~ Positional:D|Bool {
                     my $check = check-for($path ~ '/additionalProperties', $_, :%formats, :%add-formats);
                     push @checks, AdditionalItemsCheck.new(:$path, :$check, size => %schema<items>.elems);
                 }
@@ -680,7 +683,7 @@ class JSON::Schema {
         my %array-keys = minItems => MinItemsCheck, maxItems => MaxItemsCheck;
         for %array-keys.kv -> $prop, $check {
             with %schema{$prop} {
-                when UInt {
+                when UInt:D {
                     push @checks, $check.new(:$path, value => $_);
                 }
                 default {
@@ -702,7 +705,7 @@ class JSON::Schema {
         }
 
         with %schema<contains> {
-            when Associative|Bool:D {
+            when Associative:D|{$_ eqv True || $_ eqv False} {
                 my $check = check-for($path ~ '/contains', $_, :%formats, :%add-formats);
                 push @checks, ContainsCheck.new(:$path, :$check);
             }
@@ -713,7 +716,7 @@ class JSON::Schema {
         }
 
         with %schema<minProperties> {
-            when UInt {
+            when UInt:D {
                 push @checks, MinPropertiesCheck.new(:$path, :min($_));
             }
             default {
@@ -723,7 +726,7 @@ class JSON::Schema {
         }
 
         with %schema<maxProperties> {
-            when UInt {
+            when UInt:D {
                 push @checks, MaxPropertiesCheck.new(:$path, :max($_));
             }
             default {
@@ -733,8 +736,8 @@ class JSON::Schema {
         }
 
         with %schema<required> {
-            when Positional {
-                if ([&&] .map(* ~~ Str)) && .elems == .unique.elems {
+            when Positional:D {
+                if .all ~~ Str:D && .elems == .unique.elems {
                     push @checks, RequiredCheck.new(:$path, prop => @$_);
                 } else {
                     proceed;
@@ -747,8 +750,8 @@ class JSON::Schema {
         }
 
         with %schema<properties> {
-            when Associative {
-                unless .values.map(* ~~ Associative|Bool:D).all {
+            when Associative:D {
+                unless .values.all ~~ Associative:D|Bool {
                     die X::JSON::Schema::BadSchema.new:
                     :$path, :reason("The properties property inner values must be an object");
                 }
@@ -762,7 +765,7 @@ class JSON::Schema {
         }
 
         with %schema<patternProperties> {
-            when Associative {
+            when Associative:D {
                 my @regex-checks;
                 for .kv -> $pattern, $schema {
                     # A number of check -> inner check pairs
@@ -777,7 +780,7 @@ class JSON::Schema {
         }
 
         with %schema<additionalProperties> {
-            when Associative|Bool:D {
+            when Associative:D|{$_ eqv True || $_ eqv False} {
                 my @inner-const-checks;
                 my @inner-regex-checks;
                 with %schema<properties> {
@@ -800,18 +803,18 @@ class JSON::Schema {
         }
 
         with %schema<dependencies> {
-            when Associative {
+            when Associative:D {
                 for .kv -> $prop, $_ {
-                    if $_ !~~ Associative|Positional {
+                    if $_ !~~ Associative:D|Positional:D {
                         die X::JSON::Schema::BadSchema.new:
                             :$path, :reason("The dependencies properties values must be an object or a list");
                     }
-                    if $_ ~~ Positional && not .map(* ~~ Str).all {
+                    if $_ ~~ Positional:D && .values.all !~~ Str:D {
                         die X::JSON::Schema::BadSchema.new:
                             :$path, :reason("The dependencies property array value must contain only string objects");
                     }
 
-                    my $check = $_ ~~ Positional ??
+                    my $check = $_ ~~ Positional:D ??
                         RequiredCheck.new(:$path, prop => @$_) !!
                         check-for($path ~ '/dependencies', $_, :%formats, :%add-formats);
                     push @checks, DependencyCheck.new(:$path, :$prop, :$check);
@@ -824,18 +827,18 @@ class JSON::Schema {
         }
 
         my $then = %schema<then>;
-        if $then.defined && $then !~~ Associative {
+        if $then.defined && $then !~~ Associative:D {
             die X::JSON::Schema::BadSchema.new:
             :$path, :reason("The then property must be an object");
         }
         my $else = %schema<else>;
-        if $else.defined && $else !~~ Associative {
+        if $else.defined && $else !~~ Associative:D {
             die X::JSON::Schema::BadSchema.new:
             :$path, :reason("The else property must be an object");
         }
 
         with %schema<if> {
-            unless $_ ~~ Associative {
+            unless $_ ~~ Associative:D {
                 die X::JSON::Schema::BadSchema.new:
                     :$path, :reason("The if property must be an object");
             }
@@ -847,7 +850,7 @@ class JSON::Schema {
         }
 
         with %schema<propertyNames> {
-            when Associative|Bool:D {
+            when Associative:D|{$_ eqv True || $_ eqv False} {
                 my $check = check-for($path ~ '/propertyNames', $_, :%formats, :%add-formats);
                 push @checks, PropertyNamesCheck.new(:$path, :$check);
             }
@@ -858,7 +861,7 @@ class JSON::Schema {
         }
 
         with %schema<allOf> {
-            when Positional {
+            when Positional:D {
                 push @checks, AllCheck.new(:path("$path/allOf"),
                                            :!native,
                                            checks => .map({ check-for($path ~ '/allOf', $_, :%formats, :%add-formats) }));
@@ -870,7 +873,7 @@ class JSON::Schema {
         }
 
         with %schema<anyOf> {
-            when Positional {
+            when Positional:D {
                 push @checks, OrCheck.new(:path("$path/anyOf"),
                                           checks => .map({ check-for($path ~ '/anyOf', $_, :%formats, :%add-formats) }));
             }
@@ -881,7 +884,7 @@ class JSON::Schema {
         }
 
         with %schema<oneOf> {
-            when Positional {
+            when Positional:D {
                 push @checks, OneCheck.new(:path("$path/oneOf"),
                                            checks => .map({ check-for($path ~ '/oneOf', $_, :%formats, :%add-formats) }));
             }
@@ -892,7 +895,7 @@ class JSON::Schema {
         }
 
         with %schema<not> {
-            when Associative {
+            when Associative:D {
                 push @checks, NotCheck.new(:path("$path/not"),
                                            check => check-for($path ~ '/not', $_, :%formats, :%add-formats));
             }
@@ -903,7 +906,7 @@ class JSON::Schema {
         }
 
         with %schema<format> {
-            if $_ !~~ Str {
+            if $_ !~~ Str:D {
                 die X::JSON::Schema::Bad::Schema.new:
                     :$path, :reason("The format property bust be a string");
             }
