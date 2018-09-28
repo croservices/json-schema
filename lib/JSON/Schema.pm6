@@ -386,30 +386,10 @@ class JSON::Schema {
 
     my class PropertiesCheck does Check {
         has Check %.props;
-        has $.add;
         method check($value --> Nil) {
             if $value ~~ Associative:D {
-                if $!add === True {
-                    for (%!props.keys (&) $value.keys).keys -> $key {
-                        %!props{$key}.check($value{$key});
-                    }
-                } elsif $!add === False {
-                    if (set $value.keys) ⊈ (set %!props.keys) {
-                        die X::JSON::Schema::Failed.new:
-                            path => $!path ~ '/properties',
-                            :reason("Object has properties that are not covered by properties property: $((set $value.keys) (-) (set %!props.keys)).keys.join(', ')");
-                    } else {
-                        $value.keys.map({ %!props{$_}.check($value{$_}) });
-                    }
-                } else {
-                    for (%!props.keys (&) $value.keys).keys -> $key {
-                        %!props{$key}.check($value{$key});
-                    }
-                    if $!add.elems != 0 {
-                        for ($value.keys (-) %!props.keys).keys -> $key {
-                            $!add.check($value{$key});
-                        }
-                    }
+                for (%!props.keys (&) $value.keys).keys -> $key {
+                    %!props{$key}.check($value{$key});
                 }
             }
         }
@@ -756,7 +736,7 @@ class JSON::Schema {
                     :$path, :reason("The properties property inner values must be an object");
                 }
                 my %props = .map({ .key => check-for($path ~ "/properties/{.key}", %(.value), :%formats, :%add-formats) });
-                push @checks, PropertiesCheck.new(:$path, :%props, add => {});
+                push @checks, PropertiesCheck.new(:$path, :%props);
             }
             default {
                 die X::JSON::Schema::BadSchema.new:
@@ -780,7 +760,7 @@ class JSON::Schema {
         }
 
         with %schema<additionalProperties> {
-            when Associative:D|{$_ eqv True || $_ eqv False} {
+            when Associative:D {
                 my @inner-const-checks;
                 my @inner-regex-checks;
                 with %schema<properties> {
