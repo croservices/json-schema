@@ -272,7 +272,7 @@ class JSON::Schema {
     my class MinItemsCheck does Check {
         has Int $.value;
         method check($value --> Nil) {
-            if $value ~~ Positional && $value.elems < $!value {
+            if $value ~~ Positional:D && $value.elems < $!value {
                 die X::JSON::Schema::Failed.new:
                     :$!path, :reason("Array has less than $!value elements");
             }
@@ -282,7 +282,7 @@ class JSON::Schema {
     my class MaxItemsCheck does Check {
         has Int $.value;
         method check($value --> Nil) {
-            if $value ~~ Positional && $value.elems > $!value {
+            if $value ~~ Positional:D && $value.elems > $!value {
                 die X::JSON::Schema::Failed.new:
                     :$!path, :reason("Array has less than $!value elements");
             }
@@ -291,7 +291,7 @@ class JSON::Schema {
 
     my class UniqueItemsCheck does Check {
         method check($value --> Nil) {
-            if $value ~~ Positional && $value.elems != $value.unique(with => &[eqv]).elems {
+            if $value ~~ Positional:D && $value.elems != $value.unique(with => &[eqv]).elems {
                 die X::JSON::Schema::Failed.new:
                     :$!path, :reason("Array has duplicated values");
             }
@@ -302,7 +302,7 @@ class JSON::Schema {
         has Check $.check;
 
         method check($value --> Nil) {
-            if $value ~~ Positional {
+            if $value ~~ Positional:D {
                 for @$value -> $item {
                     $!check.check($item);
                 }
@@ -314,7 +314,7 @@ class JSON::Schema {
         has Check @.checks;
 
         method check($value --> Nil) {
-            if $value ~~ Positional {
+            if $value ~~ Positional:D {
                 for @$value Z @!checks -> ($item, $check) {
                     $check.check($item);
                 }
@@ -327,7 +327,7 @@ class JSON::Schema {
         has Int $.size;
 
         method check($value --> Nil) {
-            if $value ~~ Positional && $value.elems > $!size {
+            if $value ~~ Positional:D && $value.elems > $!size {
                 for @$value[$!size..*] -> $item {
                     $!check.check($item);
                 }
