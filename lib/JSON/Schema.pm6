@@ -1,7 +1,7 @@
 use v6;
 use Cro::Uri;
 use DateTime::Parse;
-use JSON::ECMA262Regex;
+use ECMA262Regex;
 use JSON::Pointer;
 use JSON::Pointer::Relative;
 
@@ -40,7 +40,7 @@ class JSON::Schema {
         uri-template => { so try Cro::Uri::URI-Template.parse($_) },
         json-pointer => { so try JSONPointer.parse($_) },
         relative-json-pointer => { so try JSONPointerRelative.parse($_) },
-        regex => { so try ECMA262Regex.parse($_) };
+        regex => { ECMA262Regex.validate($_) };
 
     # Role that describes a single check for a given path.
     # `chech` method is overloaded, with possible usage of additional per-class
@@ -258,8 +258,7 @@ class JSON::Schema {
         has Str $.pattern;
         has Regex $!rx;
         submethod TWEAK() {
-            use MONKEY-SEE-NO-EVAL;
-            $!rx = EVAL 'rx:P5/' ~ $!pattern ~ '/';
+            $!rx = ECMA262Regex.compile($!pattern);
         }
         method check($value --> Nil) {
             if $value ~~ Str:D && $value !~~ $!rx {
@@ -616,7 +615,7 @@ class JSON::Schema {
 
         with %schema<pattern> {
             when Str:D {
-                if ECMA262Regex.parse($_) {
+                if ECMA262Regex.validate($_) {
                     push @checks, PatternCheck.new(:$path, :pattern($_));
                 }
                 else {

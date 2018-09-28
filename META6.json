@@ -4,18 +4,17 @@
     "perl" : "6.c",
     "license" : "Artistic-2.0",
     "meta-version" : "0",
-    "depends" : [ "Cro::Core", "DateTime::Parse", "JSON::Pointer" ],
+    "depends" : [ "Cro::Core", "DateTime::Parse", "JSON::Pointer", "ECMA262Regex" ],
     "authors" : [
         "Alexander Kiryuhin <alexander.kiryuhin@gmail.com>",
         "Jonathan Worthington <jonathan@edument.se>"
     ],
     "provides" : {
-        "JSON::Schema" : "lib/JSON/Schema.pm6",
-        "JSON::ECMA262Regex" : "lib/JSON/ECMA262Regex.pm6"
+        "JSON::Schema" : "lib/JSON/Schema.pm6"
     },
-    "source-url" : "https://github.com/croservices/json-schema.git",
+    "source-url" : "git://github.com/croservices/json-schema.git",
     "support" : {
-        "source" : "https://github.com/croservices/json-schema.git"
+        "source" : "git://github.com/croservices/json-schema.git"
     },
     "version" : "0.8"
 }
