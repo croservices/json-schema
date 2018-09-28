@@ -813,18 +813,18 @@ class JSON::Schema {
         }
 
         my $then = %schema<then>;
-        if $then.defined && $then !~~ Associative:D {
+        if $then.defined && $then !~~ Associative:D|{$_ eqv True || $_ eqv False} {
             die X::JSON::Schema::BadSchema.new:
             :$path, :reason("The then property must be an object");
         }
         my $else = %schema<else>;
-        if $else.defined && $else !~~ Associative:D {
+        if $else.defined && $else !~~ Associative:D|{$_ eqv True || $_ eqv False} {
             die X::JSON::Schema::BadSchema.new:
             :$path, :reason("The else property must be an object");
         }
 
         with %schema<if> {
-            unless $_ ~~ Associative:D {
+            unless $_ ~~ Associative:D|{$_ eqv True || $_ eqv False} {
                 die X::JSON::Schema::BadSchema.new:
                     :$path, :reason("The if property must be an object");
             }
@@ -881,7 +881,7 @@ class JSON::Schema {
         }
 
         with %schema<not> {
-            when Associative:D {
+            when Associative:D|{$_ eqv True || $_ eqv False} {
                 push @checks, NotCheck.new(:path("$path/not"),
                                            check => check-for($path ~ '/not', $_, :%formats, :%add-formats));
             }
