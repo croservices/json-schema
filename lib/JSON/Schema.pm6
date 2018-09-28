@@ -171,7 +171,7 @@ class JSON::Schema {
         has $.enum;
         method check($value --> Nil) {
             return if $value ~~ Nil && Nil (elem) $!enum;
-            unless $value.defined && so $!enum.map(* eqv $value).any {
+            unless $value.defined && $!enum.map(* eqv $value).any {
                 die X::JSON::Schema::Failed.new:
                     :$!path, :reason("Value '{$value.perl}' is outside of enumeration set by enum property");
             }
