@@ -236,7 +236,7 @@ class JSON::Schema {
     my class MinLengthCheck does Check {
         has Int $.value;
         method check($value --> Nil) {
-            if $value ~~ Str && $value.defined && $value.codes < $!value {
+            if $value ~~ Str:D && $value.codes < $!value {
                 die X::JSON::Schema::Failed.new:
                     :$!path, :reason("String is less than $!value codepoints");
             }

@@ -36,6 +36,7 @@ throws-like
         minLength => 5,
         maxLength => 10
     });
+    nok $schema.validate(Str), 'String type object rejected';
     ok $schema.validate('hello'), 'String of minimum length is ok';
     nok $schema.validate('hell'), 'String below minimum length rejected';
     ok $schema.validate('hellohello'), 'String of maximum length is ok';
