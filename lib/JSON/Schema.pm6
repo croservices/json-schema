@@ -102,7 +102,7 @@ class JSON::Schema {
             }
             unless $check {
                 die X::JSON::Schema::Failed.new:
-                    :$!path, :reason('Value does not passed a single check') unless $check;
+                    :$!path, :reason('Value does not passed a single check');
             }
         }
     }
