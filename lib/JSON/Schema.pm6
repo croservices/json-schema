@@ -24,23 +24,23 @@ class X::JSON::Schema::Failed is Exception {
 
 class JSON::Schema {
     my %DEFAULT-FORMAT =
-        date-time => { CATCH {default {False}}; DateTime::Parse.new($_, :rule('rfc3339-date')) },
-        date => { CATCH {default {False}}; DateTime::Parse.new($_, :rule('date5')) },
-        time => { CATCH {default {False}}; DateTime::Parse.new($_, :rule('time2')) },
+        date-time => { so try DateTime::Parse.new($_, :rule('rfc3339-date')) },
+        date => { so try DateTime::Parse.new($_, :rule('date5')) },
+        time => { so try DateTime::Parse.new($_, :rule('time2')) },
         email => { True },
         idn-email => { True },
         hostname => { True },
         idn-hostname => { True },
-        ipv4 => { CATCH {default {False}}; Cro::Uri::GenericParser.parse($_, :rule('IPv4address')) },
-        ipv6 => { CATCH {default {False}}; Cro::Uri::GenericParser.parse($_, :rule('IPv6address')) },
-        uri => { CATCH {default {False}}; Cro::Uri.parse($_) },
-        uri-reference => { CATCH {default {False}}; Cro::Uri::GenericParser.parse($_, :rule<relative-ref>) },
+        ipv4 => { so try Cro::Uri::GenericParser.parse($_, :rule('IPv4address')) },
+        ipv6 => { so try Cro::Uri::GenericParser.parse($_, :rule('IPv6address')) },
+        uri => { so try Cro::Uri.parse($_) },
+        uri-reference => { so try Cro::Uri::GenericParser.parse($_, :rule<relative-ref>) },
         iri => { True },
         iri-reference => { True },
-        uri-template => { CATCH {default {False}}; Cro::Uri::URI-Template.parse($_) },
-        json-pointer => { CATCH {default {False}}; JSONPointer.parse($_) },
-        relative-json-pointer => { CATCH {default {False}}; JSONPointerRelative.parse($_) },
-        regex => { CATCH {default {False}}; ECMA262Regex.parse($_) };
+        uri-template => { so try Cro::Uri::URI-Template.parse($_) },
+        json-pointer => { so try JSONPointer.parse($_) },
+        relative-json-pointer => { so try JSONPointerRelative.parse($_) },
+        regex => { so try ECMA262Regex.parse($_) };
 
     # Role that describes a single check for a given path.
     # `chech` method is overloaded, with possible usage of additional per-class
@@ -510,7 +510,7 @@ class JSON::Schema {
     }
 
     my class TrueCheck does Check {
-        method check($value --> Nil) { True }
+        method check($value --> Nil) {}
     }
     my class FalseCheck does Check {
         method check($value --> Nil) { die X::JSON::Schema::Failed.new(:$!path, :reason("False schema is failed")) }
