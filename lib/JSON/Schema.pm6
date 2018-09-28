@@ -859,7 +859,7 @@ class JSON::Schema {
         with %schema<allOf> {
             when Positional {
                 push @checks, AllCheck.new(:path("$path/allOf"),
-                                           native => False,
+                                           :!native,
                                            checks => .map({ check-for($path ~ '/allOf', $_, :%formats, :%add-formats) }));
             }
             default {
@@ -914,7 +914,7 @@ class JSON::Schema {
             }
         }
 
-        @checks == 1 ?? @checks[0] !! AllCheck.new(:@checks);
+        @checks == 1 ?? @checks[0] !! AllCheck.new(:@checks, :native);
     }
 
     method validate($value --> True) {
