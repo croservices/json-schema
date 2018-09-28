@@ -388,6 +388,9 @@ class JSON::Schema {
         has Check %.props;
         method check($value --> Nil) {
             if $value ~~ Associative:D {
+                # Validation succeeds if, for each name that appears in both the instance and
+                # as a name within this keyword’s value, the child instance for that name successfully
+                # validates against the corresponding schema.
                 for (%!props.keys (&) $value.keys).keys -> $key {
                     %!props{$key}.check($value{$key});
                 }
@@ -449,7 +452,7 @@ class JSON::Schema {
         has Str $.prop;
         has Check $.check;
         method check($value --> Nil) {
-            $!check.check($value) if $value ~~ Associative && $value{$!prop};
+            $!check.check($value) if $value ~~ Associative:D && $value{$!prop};
         }
     }
 
@@ -539,7 +542,6 @@ class JSON::Schema {
         }
 
         my %schema = $schema;
-
         my @checks;
 
         with %schema<type> {
@@ -648,8 +650,8 @@ class JSON::Schema {
         }
 
         with %schema<additionalItems> {
-            when Associative:D {
-                if %schema<items> ~~ Positional:D|Bool {
+            when Associative:D|{$_ eqv True || $_ eqv False} {
+                if %schema<items> ~~ Positional:D|{$_ eqv True || $_ eqv False} {
                     my $check = check-for($path ~ '/additionalProperties', $_, :%formats, :%add-formats);
                     push @checks, AdditionalItemsCheck.new(:$path, :$check, size => %schema<items>.elems);
                 }
@@ -731,9 +733,9 @@ class JSON::Schema {
 
         with %schema<properties> {
             when Associative:D {
-                unless .values.all ~~ Associative:D|Bool {
+                unless .values.all ~~ Associative:D|{$_ eqv True || $_ eqv False} {
                     die X::JSON::Schema::BadSchema.new:
-                    :$path, :reason("The properties property inner values must be an object");
+                        :$path, :reason("The properties property inner values must be an object");
                 }
                 my %props = .map({ .key => check-for($path ~ "/properties/{.key}", %(.value), :%formats, :%add-formats) });
                 push @checks, PropertiesCheck.new(:$path, :%props);
@@ -746,6 +748,10 @@ class JSON::Schema {
 
         with %schema<patternProperties> {
             when Associative:D {
+                if $_.grep({ .value !~~ Associative:D|{$_ eqv True || $_ eqv False} }).keys -> @keys {
+                    die X::JSON::Schema::BadSchema.new:
+                        :$path, :reason("The patternProperties property inner values must be a JSON schema, encountered error for: {@keys.join(', ')}");
+                }
                 my @regex-checks;
                 for .kv -> $pattern, $schema {
                     # A number of check -> inner check pairs
@@ -760,7 +766,7 @@ class JSON::Schema {
         }
 
         with %schema<additionalProperties> {
-            when Associative:D {
+            when Associative:D|{$_ eqv True || $_ eqv False} {
                 my @inner-const-checks;
                 my @inner-regex-checks;
                 with %schema<properties> {

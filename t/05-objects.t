@@ -105,6 +105,17 @@ throws-like
     ok $schema.validate({name => 'name', foo => 'foo', add1 => 1.0}), 'Additional properties do not interfere with named and patterned';
 }
 
+{
+    $schema = JSON::Schema.new(schema => {
+        properties => {
+            name => { type => 'string' }
+        },
+        additionalProperties => False
+    });
+    ok $schema.validate({name => "foo"}), 'Valid property is accepted';
+    nok $schema.validate({name => "foo", bar => 2}), 'Additional property is rejected';
+}
+
 throws-like
     { JSON::Schema.new(schema => { dependencies => 2.5 }) },
     X::JSON::Schema::BadSchema,
@@ -142,6 +153,11 @@ throws-like
     { JSON::Schema.new(schema => { propertyNames => -1 }) },
     X::JSON::Schema::BadSchema,
     'Having propertyNames property be a non-object is refused (Int)';
+
+throws-like
+    { JSON::Schema.new(schema => { patternProperties => { one => 1, two => {}, three => True, four => 'hai' } }) },
+    X::JSON::Schema::BadSchema,
+    'Having patternProperties property have non JSON Schema values is refused';
 
 {
     $schema = JSON::Schema.new(schema => {
