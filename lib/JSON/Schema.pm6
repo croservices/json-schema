@@ -42,6 +42,17 @@ class JSON::Schema {
         relative-json-pointer => { so try JSONPointerRelative.parse($_) },
         regex => { ECMA262Regex.validate($_) };
 
+    # When a `validate-errors` call is in progress, `$*JSON-SCHEMA-COLLECT`
+    # holds an Array into which validation failures are pushed so that
+    # iteration can continue and report every problem at once. Outside such a
+    # call it is Nil (set by `validate`/`validate-errors`), and failures
+    # propagate via `die` exactly as before. Boolean combinators (anyOf/oneOf/
+    # not/if/contains) reset it to Nil locally so their pass/fail semantics,
+    # which rely on catching failures, are unaffected.
+    my sub note-failure(X::JSON::Schema::Failed $ex --> Nil) {
+        with $*JSON-SCHEMA-COLLECT { .push($ex) } else { $ex.rethrow }
+    }
+
     # Role that describes a single check for a given path.
     # `chech` method is overloaded, with possible usage of additional per-class
     # attributes
@@ -59,7 +70,7 @@ class JSON::Schema {
                 CATCH {
                     when X::JSON::Schema::Failed {
                         my $path = $!native ?? .path !! "{.path}/{$i + 1}";
-                        die X::JSON::Schema::Failed.new(:$path, reason => .reason);
+                        note-failure(X::JSON::Schema::Failed.new(:$path, reason => .reason));
                     }
                 }
             }
@@ -69,6 +80,9 @@ class JSON::Schema {
     my class OrCheck does Check {
         has @.checks;
         method check($value --> Nil) {
+            # anyOf: branches must fail-fast (die) so we can catch and try the
+            # next one; never collect partial failures from inside a branch.
+            my $*JSON-SCHEMA-COLLECT = Nil;
             for @!checks.kv -> $i, $c {
                 $c.check($value);
                 return;
@@ -83,6 +97,8 @@ class JSON::Schema {
     my class OneCheck does Check {
         has @.checks;
         method check($value --> Nil) {
+            # oneOf: as for anyOf, branch failures must not be collected.
+            my $*JSON-SCHEMA-COLLECT = Nil;
             my $check = False;
             my $failed = False;
             for @!checks.kv -> $i, $c {
@@ -110,6 +126,9 @@ class JSON::Schema {
     my class NotCheck does Check {
         has Check $.check;
         method check($value --> Nil) {
+            # not: the inner failure is the success condition, so it must die
+            # and be caught here rather than collected.
+            my $*JSON-SCHEMA-COLLECT = Nil;
             $!check.check($value);
             CATCH {
                 when X::JSON::Schema::Failed {
@@ -184,7 +203,7 @@ class JSON::Schema {
         method check($value --> Nil) {
             unless $value eqv $!const {
                 die X::JSON::Schema::Failed.new:
-                    :$!path, :reason("Value '{$value.perl}' does not match with constant $!const");
+                    :$!path, :reason("Value '{$value.raku}' does not match with constant $!const");
             }
         }
     }
@@ -304,6 +323,7 @@ class JSON::Schema {
             if $value ~~ Positional:D {
                 for @$value -> $item {
                     $!check.check($item);
+                    CATCH { when X::JSON::Schema::Failed { note-failure($_) } }
                 }
             }
         }
@@ -316,6 +336,7 @@ class JSON::Schema {
             if $value ~~ Positional:D {
                 for @$value Z @!checks -> ($item, $check) {
                     $check.check($item);
+                    CATCH { when X::JSON::Schema::Failed { note-failure($_) } }
                 }
             }
         }
@@ -329,6 +350,7 @@ class JSON::Schema {
             if $value ~~ Positional:D && $value.elems > $!size {
                 for @$value[$!size..*] -> $item {
                     $!check.check($item);
+                    CATCH { when X::JSON::Schema::Failed { note-failure($_) } }
                 }
             }
         }
@@ -338,6 +360,9 @@ class JSON::Schema {
         has Check $.check;
 
         method check($value --> Nil) {
+            # contains: succeeds if any element matches, so element failures are
+            # control flow, not collectable problems.
+            my $*JSON-SCHEMA-COLLECT = Nil;
             if $value ~~ Positional:D {
                 for @$value -> $item {
                     CATCH {
@@ -392,6 +417,7 @@ class JSON::Schema {
                 # validates against the corresponding schema.
                 for (%!props.keys (&) $value.keys).keys -> $key {
                     %!props{$key}.check($value{$key});
+                    CATCH { when X::JSON::Schema::Failed { note-failure($_) } }
                 }
             }
         }
@@ -410,6 +436,7 @@ class JSON::Schema {
                     next if $! ~~ X::JSON::Schema::Failed;
                     # If value survived regex check, check it
                     $inner-check.check($val);
+                    CATCH { when X::JSON::Schema::Failed { note-failure($_) } }
                 }
             }
         }
@@ -443,6 +470,7 @@ class JSON::Schema {
                 }
                 next if $already-checked;
                 $!check.check($val);
+                CATCH { when X::JSON::Schema::Failed { note-failure($_) } }
             }
         }
     }
@@ -460,7 +488,10 @@ class JSON::Schema {
 
         method check($value --> Nil) {
             if $value ~~ Associative:D {
-                $!check.check($_) for $value.keys;
+                for $value.keys {
+                    $!check.check($_);
+                    CATCH { when X::JSON::Schema::Failed { note-failure($_) } }
+                }
             }
         }
     }
@@ -471,8 +502,15 @@ class JSON::Schema {
         has Check $.else;
 
         method check($value --> Nil) {
-            try $!if.check($value);
-            if !$!.defined {
+            # The `if` branch is a predicate: it must fail-fast so the `try`
+            # below can detect the outcome. `then`/`else` are assertions and
+            # may collect normally.
+            my $if-failed = do {
+                my $*JSON-SCHEMA-COLLECT = Nil;
+                try $!if.check($value);
+                $!.defined;
+            };
+            if !$if-failed {
                 $!then.check($value);
             }
             else {
@@ -907,11 +945,33 @@ class JSON::Schema {
     }
 
     method validate($value --> True) {
+        my $*JSON-SCHEMA-COLLECT = Nil;
         $!check.check($value);
         CATCH {
             when X::JSON::Schema::Failed {
                 fail $_;
             }
         }
+    }
+
+    #| Validate `$value` and return a List of every X::JSON::Schema::Failed
+    #| problem instead of failing on the first one. An empty list means the
+    #| value is valid. Validation keeps going after a failure (except inside
+    #| anyOf/oneOf/not/if/contains, which stay atomic) so the caller can report
+    #| all problems at once. `validate` is unchanged: with no collector active,
+    #| failures still propagate on the first error.
+    method validate-errors($value --> List) {
+        my @errors;
+        {
+            my $*JSON-SCHEMA-COLLECT = @errors;
+            $!check.check($value);
+            CATCH {
+                # A failure at the very root (e.g. a schema that compiles to a
+                # single, non-iterating check) has no enclosing collector to
+                # catch it, so record it here.
+                when X::JSON::Schema::Failed { @errors.push($_) }
+            }
+        }
+        @errors.List;
     }
 }
