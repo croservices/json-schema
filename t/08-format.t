@@ -124,4 +124,37 @@ my $schema;
     nok $schema.validate('hellou'), 'add-formats format rejected invalid input';
 }
 
+{
+    $schema = JSON::Schema.new(schema => {
+        type => 'string',
+        format => 'hostname'
+    });
+    ok  $schema.validate('example.com'),         'Valid hostname accepted';
+    ok  $schema.validate('foo-bar.example.org'), 'Hostname with internal hyphen accepted';
+    ok  $schema.validate('a'),                   'Single-label hostname accepted';
+    ok  $schema.validate('x123.test'),           'Hostname with digits accepted';
+    nok $schema.validate('-bad.com'),            'Hostname label starting with hyphen rejected';
+    nok $schema.validate('bad-.com'),            'Hostname label ending with hyphen rejected';
+    nok $schema.validate('a..b'),                'Hostname with empty label rejected';
+    nok $schema.validate('has_underscore.com'),  'Hostname with underscore rejected';
+    nok $schema.validate('ends.with.'),          'Hostname with trailing dot rejected';
+    nok $schema.validate(('a' x 64) ~ '.com'),   'Hostname label over 63 chars rejected';
+}
+
+{
+    $schema = JSON::Schema.new(schema => {
+        type => 'string',
+        format => 'email'
+    });
+    ok  $schema.validate('user@example.com'),          'Valid email accepted';
+    ok  $schema.validate('first.last@sub.domain.org'), 'Dotted local part and subdomain accepted';
+    ok  $schema.validate('a+b@test.io'),               'Plus tag in local part accepted';
+    nok $schema.validate('plainaddress'),              'Email without @ rejected';
+    nok $schema.validate('@no-local.com'),             'Email without local part rejected';
+    nok $schema.validate('no-domain@'),                'Email without domain rejected';
+    nok $schema.validate('two@@at.com'),               'Email with double @ rejected';
+    nok $schema.validate('user@-bad.com'),             'Email with invalid hostname rejected';
+    nok $schema.validate('user@b..c'),                 'Email with empty domain label rejected';
+}
+
 done-testing;

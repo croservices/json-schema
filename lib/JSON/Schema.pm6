@@ -23,13 +23,36 @@ class X::JSON::Schema::Failed is Exception {
 }
 
 class JSON::Schema {
+    # RFC 1123 host name: dot-separated labels, each 1-63 characters of
+    # letters, digits and hyphens, not starting or ending with a hyphen, with
+    # a 253-character total limit.
+    my regex hostname-label { <[A..Za..z0..9]> [ <[A..Za..z0..9-]> ** 0..61 <[A..Za..z0..9]> ]? }
+    my sub valid-hostname($value --> Bool) {
+        $value ~~ Str:D && 0 < $value.chars <= 253
+            && so $value ~~ /^ <hostname-label> [ '.' <hostname-label> ]* $/
+    }
+
+    # Pragmatic RFC 5321 mailbox: an unquoted dot-atom local part followed by
+    # '@' and a host-name domain. Quoted local parts and address literals
+    # ([1.2.3.4]) are intentionally not accepted.
+    my token email-atext { <[A..Za..z0..9 ! # $ % & ' * + \- / = ? ^ _ ` { | } ~]> }
+    my sub valid-email($value --> Bool) {
+        return False unless $value ~~ Str:D;
+        my @parts = $value.split('@');
+        return False unless @parts == 2;
+        my ($local, $domain) = @parts;
+        return False unless 0 < $local.chars <= 64;
+        return False unless $local ~~ /^ <email-atext>+ [ '.' <email-atext>+ ]* $/;
+        valid-hostname($domain);
+    }
+
     my %DEFAULT-FORMAT =
         date-time => { so try DateTime::Parse.new($_, :rule('rfc3339-date')) },
         date => { so try DateTime::Parse.new($_, :rule('date5')) },
         time => { so try DateTime::Parse.new($_, :rule('time2')) },
-        email => { True },
+        email => { valid-email($_) },
         idn-email => { True },
-        hostname => { True },
+        hostname => { valid-hostname($_) },
         idn-hostname => { True },
         ipv4 => { so try Cro::Uri::GenericParser.parse($_, :rule('IPv4address')) },
         ipv6 => { so try Cro::Uri::GenericParser.parse($_, :rule('IPv6address')) },
